@@ -1,769 +1,1500 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HYPE Q&A 🚀 | Multi-Class Room Hubs</title>
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Orbitron:wght@700;900&family=Righteous&family=Space+Grotesk:wght@500;700;900&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mr. Fred's Brain Break Arcade</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Fredoka & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
-    <style>
-        :root {
-            --bg-dark: #07060f;
-            --primary-glow: #00f2fe;
-            --secondary-glow: #ff007f;
-            --accent-glow: #ffee00;
-            --font-display: 'Righteous', cursive;
-            --font-heading: 'Space Grotesk', sans-serif;
-            --font-body: 'Fredoka', sans-serif;
-            --font-action: 'Orbitron', sans-serif;
-        }
+  <style>
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%);
+      color: #f8fafc;
+      min-height: 100vh;
+    }
 
-        body {
-            background-color: var(--bg-dark);
-            color: #ffffff;
-            font-family: var(--font-body);
-            overflow-x: hidden;
-            transition: background-color 0.5s ease;
-        }
+    .font-heading {
+      font-family: 'Fredoka', cursive;
+    }
 
-        .font-display { font-family: var(--font-display); }
-        .font-heading { font-family: var(--font-heading); }
-        .font-action { font-family: var(--font-action); }
+    /* Glassmorphism Cards */
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.07);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    }
 
-        #bgCanvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: -1;
-            pointer-events: none;
-        }
+    .glass-button {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.2s ease-in-out;
+    }
+    .glass-button:hover {
+      background: rgba(255, 255, 255, 0.25);
+      transform: translateY(-2px);
+    }
+    .glass-button:active {
+      transform: translateY(0);
+    }
 
-        .glass-card {
-            background: rgba(18, 16, 32, 0.65);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.6);
-            transition: all 0.3s ease;
-        }
+    /* Glow Effects */
+    .arcade-glow {
+      text-shadow: 0 0 12px rgba(236, 72, 153, 0.6), 0 0 24px rgba(168, 85, 247, 0.4);
+    }
 
-        .text-gradient {
-            background: linear-gradient(90deg, var(--primary-glow) 0%, var(--secondary-glow) 50%, var(--accent-glow) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 30px rgba(255, 0, 127, 0.3);
-        }
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(168, 85, 247, 0.5);
+      border-radius: 4px;
+    }
 
-        .btn-gradient {
-            background: linear-gradient(45deg, var(--secondary-glow), var(--primary-glow));
-            background-size: 200% auto;
-            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.4);
-        }
-
-        .btn-gradient:hover {
-            background-position: right center;
-            transform: translateY(-2px) scale(1.02);
-            box-shadow: 0 8px 30px var(--primary-glow);
-        }
-
-        .q-card {
-            border-left: 5px solid var(--primary-glow);
-            transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
-        }
-        .q-card:nth-child(2n) { border-left-color: var(--secondary-glow); }
-        .q-card:nth-child(3n) { border-left-color: var(--accent-glow); }
-        .q-card:hover { transform: translateX(6px); background: rgba(255, 255, 255, 0.08); }
-        .q-card.discussed { opacity: 0.45; border-left-color: #555; text-decoration: line-through; }
-
-        .class-tab {
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .class-tab.active {
-            background: rgba(255, 255, 255, 0.18);
-            border-color: var(--primary-glow);
-            box-shadow: 0 0 20px var(--primary-glow);
-            transform: translateY(-2px);
-        }
-
-        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); border-radius: 4px; }
-
-        #toast-container {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        .toast {
-            background: rgba(10, 8, 20, 0.95);
-            border: 1px solid var(--primary-glow);
-            color: white;
-            padding: 14px 22px;
-            border-radius: 14px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.7);
-            font-family: var(--font-heading);
-            font-weight: 700;
-            animation: slideIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards, fadeOut 0.5s ease-in 2.5s forwards;
-        }
-        @keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
-
-        /* Class theme-specific custom badges */
-        .badge-helldivers { background: linear-gradient(90deg, #ffe600, #ff2a00); color: #000; font-family: var(--font-action); }
-        .badge-la_peace { background: linear-gradient(90deg, #9b51e0, #00f2fe); color: #fff; }
-        .badge-mr_clean { background: linear-gradient(90deg, #e0e0e0, #00d2ff); color: #000; }
-        .badge-sunny_seniors { background: linear-gradient(90deg, #ff7e5f, #feb47b); color: #000; }
-        .badge-bald_furious { background: linear-gradient(90deg, #ff0055, #ffaa00); color: #fff; font-family: var(--font-action); }
-    </style>
+    /* Pulse Timer */
+    @keyframes pulse-fast {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.08); opacity: 0.8; }
+    }
+    .animate-pulse-fast {
+      animation: pulse-fast 0.6s infinite;
+    }
+  </style>
 </head>
-<body class="min-h-screen flex flex-col items-center p-3 sm:p-6 md:p-8">
+<body class="flex flex-col min-h-screen text-slate-100 overflow-x-hidden">
 
-    <canvas id="bgCanvas"></canvas>
+  <!-- Top Navigation & Global Scoreboard Header -->
+  <header class="glass-panel sticky top-0 z-40 border-b border-white/10 px-4 py-3">
+    <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
+      
+      <!-- Logo & Title -->
+      <div class="flex items-center space-x-3 cursor-pointer" onclick="switchView('dashboard')">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-600 flex items-center justify-center shadow-lg shadow-rose-500/30">
+          <i class="fa-solid font-heading text-2xl text-white">F</i>
+        </div>
+        <div>
+          <h1 class="font-heading text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-300 via-pink-400 to-purple-300 arcade-glow">
+            MR. FRED'S ARCADE
+          </h1>
+          <p class="text-xs text-purple-300 font-medium tracking-wider uppercase">Classroom Brain Breaks & 20-Min Challenge Zone</p>
+        </div>
+      </div>
 
-    <div class="w-full max-w-4xl flex flex-col gap-6">
+      <!-- Quick Utility Action Bar -->
+      <div class="flex flex-wrap items-center gap-2">
+        <button onclick="toggleScoreboard()" class="glass-button px-3 py-1.5 rounded-xl text-sm font-semibold flex items-center gap-2 text-amber-300">
+          <i class="fa-solid fa-trophy"></i>
+          <span>Scoreboard</span>
+        </button>
+        <button onclick="openNamePicker()" class="glass-button px-3 py-1.5 rounded-xl text-sm font-semibold flex items-center gap-2 text-emerald-300">
+          <i class="fa-solid fa-users"></i>
+          <span>Name Picker</span>
+        </button>
+        <button onclick="openSoundboard()" class="glass-button px-3 py-1.5 rounded-xl text-sm font-semibold flex items-center gap-2 text-sky-300">
+          <i class="fa-solid fa-volume-high"></i>
+          <span>SFX</span>
+        </button>
+        <button onclick="toggleGlobalTimer()" class="glass-button px-3 py-1.5 rounded-xl text-sm font-semibold flex items-center gap-2 text-rose-300">
+          <i class="fa-solid fa-stopwatch"></i>
+          <span id="global-timer-display">05:00</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Collapsible Scoreboard Drawer -->
+    <div id="scoreboard-drawer" class="hidden max-w-7xl mx-auto mt-3 pt-3 border-t border-white/10 grid grid-cols-2 md:grid-cols-4 gap-3">
+      <!-- Team 1 -->
+      <div class="bg-indigo-950/60 p-3 rounded-xl border border-indigo-500/30 flex items-center justify-between">
+        <div>
+          <input type="text" value="Red Dragons" class="bg-transparent font-heading font-semibold text-rose-400 w-28 focus:outline-none" />
+          <div class="text-2xl font-bold font-heading text-white" id="score-team-1">0</div>
+        </div>
+        <div class="flex flex-col gap-1">
+          <button onclick="adjustScore(1, 100)" class="bg-rose-500/30 hover:bg-rose-500/50 w-7 h-7 rounded text-xs font-bold">+</button>
+          <button onclick="adjustScore(1, -50)" class="bg-rose-500/20 hover:bg-rose-500/40 w-7 h-7 rounded text-xs font-bold">-</button>
+        </div>
+      </div>
+      <!-- Team 2 -->
+      <div class="bg-indigo-950/60 p-3 rounded-xl border border-indigo-500/30 flex items-center justify-between">
+        <div>
+          <input type="text" value="Blue Wizards" class="bg-transparent font-heading font-semibold text-sky-400 w-28 focus:outline-none" />
+          <div class="text-2xl font-bold font-heading text-white" id="score-team-2">0</div>
+        </div>
+        <div class="flex flex-col gap-1">
+          <button onclick="adjustScore(2, 100)" class="bg-sky-500/30 hover:bg-sky-500/50 w-7 h-7 rounded text-xs font-bold">+</button>
+          <button onclick="adjustScore(2, -50)" class="bg-sky-500/20 hover:bg-sky-500/40 w-7 h-7 rounded text-xs font-bold">-</button>
+        </div>
+      </div>
+      <!-- Team 3 -->
+      <div class="bg-indigo-950/60 p-3 rounded-xl border border-indigo-500/30 flex items-center justify-between">
+        <div>
+          <input type="text" value="Green Ninjas" class="bg-transparent font-heading font-semibold text-emerald-400 w-28 focus:outline-none" />
+          <div class="text-2xl font-bold font-heading text-white" id="score-team-3">0</div>
+        </div>
+        <div class="flex flex-col gap-1">
+          <button onclick="adjustScore(3, 100)" class="bg-emerald-500/30 hover:bg-emerald-500/50 w-7 h-7 rounded text-xs font-bold">+</button>
+          <button onclick="adjustScore(3, -50)" class="bg-emerald-500/20 hover:bg-emerald-500/40 w-7 h-7 rounded text-xs font-bold">-</button>
+        </div>
+      </div>
+      <!-- Team 4 -->
+      <div class="bg-indigo-950/60 p-3 rounded-xl border border-indigo-500/30 flex items-center justify-between">
+        <div>
+          <input type="text" value="Gold Phoenix" class="bg-transparent font-heading font-semibold text-amber-400 w-28 focus:outline-none" />
+          <div class="text-2xl font-bold font-heading text-white" id="score-team-4">0</div>
+        </div>
+        <div class="flex flex-col gap-1">
+          <button onclick="adjustScore(4, 100)" class="bg-amber-500/30 hover:bg-amber-500/50 w-7 h-7 rounded text-xs font-bold">+</button>
+          <button onclick="adjustScore(4, -50)" class="bg-amber-500/20 hover:bg-amber-500/40 w-7 h-7 rounded text-xs font-bold">-</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Interactive Area -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 flex flex-col justify-center">
+
+    <!-- DASHBOARD VIEW -->
+    <div id="view-dashboard" class="space-y-6">
+      <!-- Welcome Banner -->
+      <div class="glass-panel p-6 md:p-8 rounded-3xl relative overflow-hidden bg-gradient-to-r from-purple-900/50 via-indigo-900/40 to-slate-900/60 border border-purple-500/30">
+        <div class="max-w-2xl">
+          <span class="px-3 py-1 rounded-full bg-purple-500/20 border border-purple-400/30 text-purple-300 text-xs font-bold tracking-wide uppercase">
+            Ready in 5 seconds • No Prep Needed
+          </span>
+          <h2 class="font-heading text-3xl md:text-5xl font-bold mt-3 text-white">
+            Got 20 Minutes Left? Let's Play! 🎉
+          </h2>
+          <p class="text-slate-300 text-base md:text-lg mt-2">
+            Select a quick game below to project on the screen. Perfect for energizing students, reviewing terms, or wrapping up class with friendly competition.
+          </p>
+        </div>
+      </div>
+
+      <!-- Game Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         
-        <div class="glass-card p-4 rounded-3xl flex flex-col gap-3">
-            <div class="flex justify-between items-center px-2">
-                <span class="font-display text-sm sm:text-base text-[#ffee00] tracking-widest uppercase flex items-center gap-2">
-                    <span class="inline-block animate-pulse">⚡</span> Select Your Class Hub:
-                </span>
-                <span id="activeClassTag" class="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-white/10 text-white/80 border border-white/20">
-                    Switch Class Below
-                </span>
-            </div>
-
-            <!-- Horizontal Scrollable Class Switcher Bar -->
-            <div class="flex items-center gap-2 overflow-x-auto pb-2 pt-1 custom-scrollbar w-full">
-                <button onclick="switchClass('helldivers')" id="tab-helldivers" class="class-tab flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/5 whitespace-nowrap font-heading font-bold text-sm">
-                    🚀 Helldivers
-                </button>
-                <button onclick="switchClass('la_peace')" id="tab-la_peace" class="class-tab flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/5 whitespace-nowrap font-heading font-bold text-sm">
-                    ✌️ La Peace
-                </button>
-                <button onclick="switchClass('mr_clean')" id="tab-mr_clean" class="class-tab flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/5 whitespace-nowrap font-heading font-bold text-sm">
-                    ✨ Mr Clean's Disciple
-                </button>
-                <button onclick="switchClass('sunny_seniors')" id="tab-sunny_seniors" class="class-tab flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/5 whitespace-nowrap font-heading font-bold text-sm">
-                    ☀️ Sunny Seniors
-                </button>
-                <button onclick="switchClass('bald_furious')" id="tab-bald_furious" class="class-tab flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/5 whitespace-nowrap font-heading font-bold text-sm">
-                    🏎️ Bald and Furious
-                </button>
-            </div>
+        <!-- Game 1: Scattergories -->
+        <div onclick="switchView('scattergories')" class="glass-panel p-5 rounded-2xl cursor-pointer hover:border-amber-400/50 hover:bg-white/10 transition-all transform hover:-translate-y-1 group">
+          <div class="w-12 h-12 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+            <i class="fa-solid fa-font"></i>
+          </div>
+          <h3 class="font-heading text-xl font-bold text-white mb-1">Scattergories</h3>
+          <p class="text-sm text-slate-300">Roll a letter & list matching items before time runs out!</p>
+          <span class="inline-block mt-4 text-xs font-semibold text-amber-400 group-hover:underline">Launch Game →</span>
         </div>
 
-        <div class="glass-card flex flex-row justify-between items-center p-4 rounded-2xl gap-3">
-            <div class="flex items-center gap-2">
-                <span id="classIconDisplay" class="text-3xl">🚀</span>
-                <div>
-                    <h3 id="classNameHeader" class="font-display text-xl text-white tracking-wide leading-none">Helldivers</h3>
-                    <span id="classSubhead" class="text-xs text-white/60 font-heading">For Democracy & Super Questions!</span>
-                </div>
-            </div>
-            <div class="flex gap-2 sm:gap-3">
-                <button onclick="pickRandomQuestion()" class="btn-gradient text-white px-3 sm:px-5 py-2.5 rounded-xl font-heading font-bold text-xs sm:text-sm flex items-center gap-1.5">
-                    🎲 <span>Random</span>
-                </button>
-                <button onclick="confirmReset()" id="resetBtn" class="bg-white/10 hover:bg-red-500/20 border border-white/20 hover:border-red-400 text-white px-3 sm:px-4 py-2.5 rounded-xl font-heading font-bold text-xs sm:text-sm transition">
-                    🧹 Reset Class
-                </button>
-            </div>
+        <!-- Game 2: Word Grid (Boggle) -->
+        <div onclick="switchView('boggle')" class="glass-panel p-5 rounded-2xl cursor-pointer hover:border-emerald-400/50 hover:bg-white/10 transition-all transform hover:-translate-y-1 group">
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+            <i class="fa-solid fa-border-all"></i>
+          </div>
+          <h3 class="font-heading text-xl font-bold text-white mb-1">Word Grid</h3>
+          <p class="text-sm text-slate-300">Find hidden words in a 4x4 letter cube grid under 3 mins.</p>
+          <span class="inline-block mt-4 text-xs font-semibold text-emerald-400 group-hover:underline">Launch Game →</span>
         </div>
 
-        <header class="text-center py-2 relative">
-            <div id="heroBadge" class="px-5 py-1.5 rounded-full text-xs font-heading font-bold uppercase tracking-widest inline-block mb-3 shadow-lg badge-helldivers">
-                🔒 100% Anonymous Classroom Discussion
-            </div>
-            <h1 id="heroTitle" class="font-display text-4xl sm:text-6xl text-gradient uppercase tracking-wider leading-tight mb-2">
-                Ask Anything
-            </h1>
-            <p id="heroDescription" class="text-base sm:text-lg opacity-85 font-heading max-w-xl mx-auto px-4">
-                No rules, no judgment. Drop your hottest takes, questions, and theories!
-            </p>
-        </header>
-
-        <div class="glass-card p-5 sm:p-7 rounded-3xl border-t-2 border-t-white/20">
-            <form id="qaForm" class="flex flex-col gap-4">
-                <div class="flex justify-between items-center">
-                    <label for="questionInput" id="inputLabel" class="font-heading text-lg sm:text-xl font-bold text-[#ffee00]">
-                        Got a question or hot take for this class?
-                    </label>
-                    <span class="text-xs text-white/50 font-mono">100% Anonymous</span>
-                </div>
-                <textarea 
-                    id="questionInput" 
-                    placeholder="Type anything on your mind... Completely anonymous and un-trackable!" 
-                    required
-                    class="w-full h-28 bg-black/50 border-2 border-white/15 focus:border-[var(--primary-glow)] focus:shadow-[0_0_25px_var(--primary-glow)] rounded-2xl p-4 text-white text-base sm:text-lg resize-none outline-none transition-all placeholder-white/35 custom-scrollbar"></textarea>
-                <button type="submit" id="submitBtn" class="btn-gradient text-white font-heading font-bold text-lg sm:text-xl py-4 rounded-2xl uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl">
-                    Submit To Feed 🚀
-                </button>
-            </form>
+        <!-- Game 3: Don't Say It! (Taboo) -->
+        <div onclick="switchView('taboo')" class="glass-panel p-5 rounded-2xl cursor-pointer hover:border-rose-400/50 hover:bg-white/10 transition-all transform hover:-translate-y-1 group">
+          <div class="w-12 h-12 rounded-xl bg-rose-500/20 text-rose-300 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+            <i class="fa-solid fa-ban"></i>
+          </div>
+          <h3 class="font-heading text-xl font-bold text-white mb-1">Don't Say It!</h3>
+          <p class="text-sm text-slate-300">Get your team to guess without mentioning forbidden terms.</p>
+          <span class="inline-block mt-4 text-xs font-semibold text-rose-400 group-hover:underline">Launch Game →</span>
         </div>
 
-        <div class="flex flex-col gap-4 mb-16">
-            <div class="flex justify-between items-center px-2">
-                <h2 class="font-display text-xl sm:text-2xl text-white tracking-wide flex items-center gap-2">
-                    Class Feed <span id="questionCountBadge" class="text-xs bg-white/10 px-3 py-1 rounded-full border border-white/15 text-white/70">0</span>
-                </h2>
-                <div class="flex gap-1 bg-black/40 p-1 rounded-xl border border-white/10">
-                    <button id="filterTop" onclick="setFilter('top')" class="tab-btn px-4 py-1.5 rounded-lg font-heading font-bold text-xs sm:text-sm text-white bg-white/20 transition">🔥 Top</button>
-                    <button id="filterNew" onclick="setFilter('new')" class="tab-btn px-4 py-1.5 rounded-lg font-heading font-bold text-xs sm:text-sm text-white/60 hover:text-white transition">⚡ New</button>
-                </div>
-            </div>
-
-            <div id="questionsFeed" class="flex flex-col gap-3">
-                <!-- Questions dynamically rendered here -->
-            </div>
+        <!-- Game 4: 5-Second Rule -->
+        <div onclick="switchView('fivesec')" class="glass-panel p-5 rounded-2xl cursor-pointer hover:border-sky-400/50 hover:bg-white/10 transition-all transform hover:-translate-y-1 group">
+          <div class="w-12 h-12 rounded-xl bg-sky-500/20 text-sky-300 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+            <i class="fa-solid fa-bolt"></i>
+          </div>
+          <h3 class="font-heading text-xl font-bold text-white mb-1">5-Second Rule</h3>
+          <p class="text-sm text-slate-300">Fast-paced lightning round! Name 3 items before the buzzer.</p>
+          <span class="inline-block mt-4 text-xs font-semibold text-sky-400 group-hover:underline">Launch Game →</span>
         </div>
+
+        <!-- Game 5: Smartboard Draw & Guess -->
+        <div onclick="switchView('pictionary')" class="glass-panel p-5 rounded-2xl cursor-pointer hover:border-purple-400/50 hover:bg-white/10 transition-all transform hover:-translate-y-1 group">
+          <div class="w-12 h-12 rounded-xl bg-purple-500/20 text-purple-300 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+            <i class="fa-solid fa-paint-brush"></i>
+          </div>
+          <h3 class="font-heading text-xl font-bold text-white mb-1">Draw & Guess</h3>
+          <p class="text-sm text-slate-300">Interactive digital whiteboard canvas with prompt generator.</p>
+          <span class="inline-block mt-4 text-xs font-semibold text-purple-400 group-hover:underline">Launch Game →</span>
+        </div>
+
+        <!-- Game 6: Classroom Wordle -->
+        <div onclick="switchView('wordle')" class="glass-panel p-5 rounded-2xl cursor-pointer hover:border-teal-400/50 hover:bg-white/10 transition-all transform hover:-translate-y-1 group">
+          <div class="w-12 h-12 rounded-xl bg-teal-500/20 text-teal-300 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+            <i class="fa-solid fa-square-poll-vertical"></i>
+          </div>
+          <h3 class="font-heading text-xl font-bold text-white mb-1">Class Word Guess</h3>
+          <p class="text-sm text-slate-300">Projectable 5-letter word puzzle for class collaboration.</p>
+          <span class="inline-block mt-4 text-xs font-semibold text-teal-400 group-hover:underline">Launch Game →</span>
+        </div>
+
+        <!-- Game 7: Would You Rather -->
+        <div onclick="switchView('wyr')" class="glass-panel p-5 rounded-2xl cursor-pointer hover:border-pink-400/50 hover:bg-white/10 transition-all transform hover:-translate-y-1 group">
+          <div class="w-12 h-12 rounded-xl bg-pink-500/20 text-pink-300 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+            <i class="fa-solid fa-scale-balanced"></i>
+          </div>
+          <h3 class="font-heading text-xl font-bold text-white mb-1">Would You Rather?</h3>
+          <p class="text-sm text-slate-300">Sparks fun class discussions & debates with live voting stats.</p>
+          <span class="inline-block mt-4 text-xs font-semibold text-pink-400 group-hover:underline">Launch Game →</span>
+        </div>
+
+        <!-- Game 8: Wheel of Fortune -->
+        <div onclick="switchView('wheel')" class="glass-panel p-5 rounded-2xl cursor-pointer hover:border-indigo-400/50 hover:bg-white/10 transition-all transform hover:-translate-y-1 group">
+          <div class="w-12 h-12 rounded-xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+            <i class="fa-solid fa-compact-disc"></i>
+          </div>
+          <h3 class="font-heading text-xl font-bold text-white mb-1">Trivia Wheel</h3>
+          <p class="text-sm text-slate-300">Spin the wheel to select categories and trivia challenges.</p>
+          <span class="inline-block mt-4 text-xs font-semibold text-indigo-400 group-hover:underline">Launch Game →</span>
+        </div>
+
+      </div>
     </div>
 
-    <div id="spotlightModal" class="fixed inset-0 bg-[#07060f]/95 backdrop-blur-2xl z-50 hidden flex-col justify-between p-6 sm:p-10 transition-all">
-        <div class="flex justify-between items-center w-full max-w-6xl mx-auto">
-            <div class="flex items-center gap-3">
-                <span id="spotlightClassBadge" class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest bg-white/10 text-[#ffee00] border border-white/20">
-                    Class Spotlight
-                </span>
-                <div class="font-display text-lg sm:text-xl text-white tracking-widest uppercase">🎤 Current Topic</div>
-            </div>
-            <button onclick="closeSpotlight()" class="bg-white/10 hover:bg-red-500/80 border border-white/20 text-white w-12 h-12 rounded-full flex items-center justify-center text-xl transition-all hover:scale-110">✕</button>
+    <!-- GAME 1: SCATTERGORIES -->
+    <div id="view-scattergories" class="hidden space-y-6">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <button onclick="switchView('dashboard')" class="glass-button px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2">
+          <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
+        </button>
+        <div class="flex items-center gap-2">
+          <select id="scat-category-select" onchange="generateScattergoriesTopics()" class="bg-indigo-950 border border-amber-400/40 rounded-xl px-3 py-1.5 text-xs text-amber-200 focus:outline-none">
+            <option value="all">🌟 All Subjects (60+ Categories)</option>
+            <option value="stem">🧪 Science & STEM</option>
+            <option value="ela">📚 ELA & Literature</option>
+            <option value="social">🌍 History & Geography</option>
+            <option value="fun">🎉 Everyday & Fun</option>
+          </select>
+          <span class="font-heading text-2xl text-amber-300 font-bold">Scattergories Challenge</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Spinner & Roll Box -->
+        <div class="glass-panel p-6 rounded-3xl flex flex-col items-center justify-center text-center">
+          <p class="text-sm text-slate-300 font-semibold mb-2">TARGET LETTER</p>
+          <div id="scat-letter" class="w-32 h-32 rounded-3xl bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-7xl font-bold font-heading text-amber-300 shadow-xl my-4">
+            ?
+          </div>
+          <button onclick="rollScattergoriesLetter()" class="glass-button px-6 py-3 rounded-2xl bg-amber-500/30 text-amber-200 font-bold text-lg w-full hover:bg-amber-500/50">
+            <i class="fa-solid fa-dice mr-2"></i> Roll Random Letter
+          </button>
         </div>
 
-        <div class="flex flex-col items-center justify-center text-center max-w-5xl mx-auto gap-8 sm:gap-12 w-full flex-grow py-6">
-            <div id="spotlightText" class="font-body text-3xl sm:text-5xl md:text-6xl font-bold leading-tight text-white drop-shadow-[0_0_35px_rgba(255,255,255,0.4)] break-words w-full">
-                "Loading Question..."
-            </div>
-
-            <!-- Timer Controls -->
-            <div class="glass-card p-6 rounded-3xl flex flex-col items-center gap-4 w-full max-w-md border-white/20">
-                <div id="timerDisplay" class="font-action text-5xl sm:text-6xl text-[var(--primary-glow)] tracking-widest drop-shadow-[0_0_20px_var(--primary-glow)]">02:00</div>
-                <div class="flex flex-wrap justify-center gap-2 sm:gap-3 w-full">
-                    <button onclick="setTimerSeconds(60)" class="bg-white/10 hover:bg-white/25 text-white px-4 py-2 rounded-xl font-heading font-bold text-sm transition">1m</button>
-                    <button onclick="setTimerSeconds(120)" class="bg-white/10 hover:bg-white/25 text-white px-4 py-2 rounded-xl font-heading font-bold text-sm transition">2m</button>
-                    <button onclick="setTimerSeconds(180)" class="bg-white/10 hover:bg-white/25 text-white px-4 py-2 rounded-xl font-heading font-bold text-sm transition">3m</button>
-                    <button onclick="toggleTimer()" id="timerToggleBtn" class="bg-white/20 hover:bg-white/30 border border-white/30 text-white px-6 py-2 rounded-xl font-heading font-bold text-sm transition ml-2">▶️ Start</button>
-                    <button onclick="resetTimer()" class="bg-white/10 hover:bg-white/25 text-white px-4 py-2 rounded-xl font-heading font-bold text-sm transition">🔄 Reset</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="flex justify-center w-full max-w-6xl mx-auto pb-4">
-            <button onclick="markSpotlightDiscussed()" class="btn-gradient text-white px-8 py-4 rounded-2xl font-heading font-bold text-lg sm:text-2xl flex items-center gap-3">
-                ✅ Mark as Discussed & Close
+        <!-- Topics List -->
+        <div class="glass-panel p-6 rounded-3xl md:col-span-2 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="font-heading text-xl font-bold text-white">Current Topics</h3>
+            <button onclick="generateScattergoriesTopics()" class="glass-button px-4 py-2 rounded-xl text-xs font-bold text-purple-300">
+              <i class="fa-solid fa-arrows-rotate mr-1"></i> New List
             </button>
+          </div>
+          <ol id="scat-topics-list" class="space-y-2.5 text-lg text-slate-200 list-decimal list-inside font-medium">
+            <li class="p-3 bg-white/5 rounded-xl border border-white/10">Click "New List" to load categories!</li>
+          </ol>
         </div>
+      </div>
     </div>
 
-    <!-- Notification Container -->
-    <div id="toast-container"></div>
+    <!-- GAME 2: WORD GRID (BOGGLE) -->
+    <div id="view-boggle" class="hidden space-y-6">
+      <div class="flex items-center justify-between">
+        <button onclick="switchView('dashboard')" class="glass-button px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2">
+          <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
+        </button>
+        <span class="font-heading text-2xl text-emerald-300 font-bold">4x4 Word Grid</span>
+      </div>
 
-    <script>
-        const CLASS_CONFIGS = {
-            helldivers: {
-                name: "Helldivers",
-                icon: "🚀",
-                subhead: "For Super Earth & Managed Democracy!",
-                heroBadge: "🛡️ Super Earth Command HQ",
-                tagline: "Deploying stratagems of knowledge!",
-                primary: "#00f2fe",
-                secondary: "#ff0044",
-                accent: "#ffe600",
-                badgeClass: "badge-helldivers",
-                bgDark: "#05070f",
-                seeds: [
-                    { id: 101, text: "Which orbital stratagem is best for solving tough physics problems?", votes: 24, discussed: false },
-                    { id: 102, text: "Are Automaton tanks just automated grading machines in disguise?", votes: 19, discussed: false },
-                    { id: 103, text: "If democracy is managed, who is managing our homework load?", votes: 31, discussed: false }
-                ]
-            },
-            la_peace: {
-                name: "La Peace",
-                icon: "✌️",
-                subhead: "Kai Cenat Meme Hub & W Rizz Zone",
-                heroBadge: "🔥 Kai Cenat & Twitch Stream Vibes",
-                tagline: "Keep it chill, keep it peaceful, drop the W takes!",
-                primary: "#9b51e0",
-                secondary: "#ff007f",
-                accent: "#00f2fe",
-                badgeClass: "badge-la_peace",
-                bgDark: "#0a0514",
-                seeds: [
-                    { id: 201, text: "Can someone hit the 'La Peace' sign before we start this surprise test?", votes: 42, discussed: false },
-                    { id: 202, text: "Is getting 100% on the final exam considered unspoken Rizz?", votes: 35, discussed: false },
-                    { id: 203, text: "What's the official stream budget for AMP room upgrades?", votes: 18, discussed: false }
-                ]
-            },
-            mr_clean: {
-                name: "Mr Clean's Disciple",
-                icon: "✨",
-                subhead: "Zero Hair, Maximum Flare & Mirror Polish",
-                heroBadge: "🧽 Clean & Shiny Knowledge Base",
-                tagline: "So shiny you can see your reflection in the wisdom!",
-                primary: "#00d2ff",
-                secondary: "#ffffff",
-                accent: "#ffe600",
-                badgeClass: "badge-mr_clean",
-                bgDark: "#040e1a",
-                seeds: [
-                    { id: 301, text: "Does the glare off the teacher's head help reflect sunlight onto our notebooks?", votes: 58, discussed: false },
-                    { id: 302, text: "What brand of wax ensures maximum aerodynamic thought process?", votes: 44, discussed: false },
-                    { id: 303, text: "Is Mr. Clean technically the highest ranking academic authority?", votes: 29, discussed: false }
-                ]
-            },
-            sunny_seniors: {
-                name: "Sunny Seniors",
-                icon: "☀️",
-                subhead: "Golden Hour, Bright Futures & Senioritis",
-                heroBadge: "🌅 Golden Hour & Bright Vibes",
-                tagline: "Shining bright through the final stretch!",
-                primary: "#ff7e5f",
-                secondary: "#feb47b",
-                accent: "#ffee00",
-                badgeClass: "badge-sunny_seniors",
-                bgDark: "#120806",
-                seeds: [
-                    { id: 401, text: "What is the scientifically proven cure for Senioritis?", votes: 39, discussed: false },
-                    { id: 402, text: "Where are we holding the official sunrise celebration?", votes: 27, discussed: false },
-                    { id: 403, text: "If we sleep 8 hours a day, why are seniors still perpetually tired?", votes: 51, discussed: false }
-                ]
-            },
-            bald_furious: {
-                name: "Bald and Furious",
-                icon: "🏎️",
-                subhead: "High-Octane Energy & Zero Hair Drag",
-                heroBadge: "🔥 Family, Speed & High-Octane Q&A",
-                tagline: "I don't have hair... I got FAMILY & FAST ANSWERS!",
-                primary: "#ff0055",
-                secondary: "#ffaa00",
-                accent: "#00f2fe",
-                badgeClass: "badge-bald_furious",
-                bgDark: "#120307",
-                seeds: [
-                    { id: 501, text: "You don't need a full head of hair when you got FAMILY. True or false?", votes: 77, discussed: false },
-                    { id: 502, text: "Can we install a nitrous oxide boost button on the classroom podium?", votes: 34, discussed: false },
-                    { id: 503, text: "What's the top quarter-mile speed of finishing this pop quiz?", votes: 26, discussed: false }
-                ]
-            }
-        };
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+        <!-- Grid -->
+        <div class="glass-panel p-6 rounded-3xl flex flex-col items-center">
+          <div id="boggle-grid" class="grid grid-cols-4 gap-3 w-full max-w-sm">
+            <!-- Populated via JS -->
+          </div>
+          <button onclick="generateBoggleGrid()" class="glass-button px-6 py-3 rounded-2xl bg-emerald-500/30 text-emerald-200 font-bold text-lg mt-6 w-full hover:bg-emerald-500/50">
+            <i class="fa-solid fa-shuffle mr-2"></i> Shake & Generate New Grid
+          </button>
+        </div>
 
-        let currentClassId = localStorage.getItem('hype_active_class') || 'helldivers';
-        let classQuestions = {};
-        let currentFilter = 'top';
-        let activeSpotlightId = null;
-        let timerInterval = null;
-        let timerSeconds = 120;
-        let isTimerRunning = false;
-        let resetConfirmState = false;
+        <!-- Instructions & Note Board -->
+        <div class="glass-panel p-6 rounded-3xl space-y-4">
+          <h3 class="font-heading text-xl font-bold text-emerald-300">How to Play</h3>
+          <p class="text-sm text-slate-300">
+            Find as many words as possible (3+ letters) by connecting letters adjacent to each other (horizontally, vertically, or diagonally). Unique words get 1 point!
+          </p>
+          <div class="p-4 bg-slate-900/60 rounded-2xl border border-white/10 space-y-2">
+            <label class="text-xs font-bold text-slate-400 uppercase">Board Notepad / Class Word Log</label>
+            <textarea placeholder="Type words discovered by students here..." class="w-full h-36 bg-transparent border-none text-emerald-200 focus:outline-none resize-none font-mono text-sm"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        // Load questions for all classes from localStorage or set seed data
-        Object.keys(CLASS_CONFIGS).forEach(classKey => {
-            const saved = localStorage.getItem(`hype_qa_${classKey}`);
-            if (saved) {
-                classQuestions[classKey] = JSON.parse(saved);
-            } else {
-                classQuestions[classKey] = [...CLASS_CONFIGS[classKey].seeds];
-                localStorage.setItem(`hype_qa_${classKey}`, JSON.stringify(classQuestions[classKey]));
-            }
+    <!-- GAME 3: DON'T SAY IT! -->
+    <div id="view-taboo" class="hidden space-y-6">
+      <div class="flex items-center justify-between">
+        <button onclick="switchView('dashboard')" class="glass-button px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2">
+          <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
+        </button>
+        <div class="flex items-center gap-2">
+          <select id="taboo-category-select" onchange="nextTabooCard()" class="bg-indigo-950 border border-purple-400/40 rounded-xl px-3 py-1.5 text-xs text-purple-200 focus:outline-none">
+            <option value="all">🌟 All Categories (50+ Cards)</option>
+            <option value="general">🎉 General Fun</option>
+            <option value="science">🧪 Science & Nature</option>
+            <option value="history">🏛️ History & Social Studies</option>
+            <option value="literature">📖 Literature & Language</option>
+            <option value="geography">🌍 Geography & Places</option>
+          </select>
+          <span class="font-heading text-2xl text-rose-300 font-bold">Don't Say It!</span>
+        </div>
+      </div>
+
+      <div class="max-w-md mx-auto">
+        <div class="glass-panel p-8 rounded-3xl border-2 border-rose-500/40 text-center shadow-2xl relative overflow-hidden">
+          <p class="text-xs font-bold text-rose-400 uppercase tracking-widest mb-2">TARGET WORD</p>
+          <div id="taboo-target" class="font-heading text-4xl font-extrabold text-white mb-6 p-4 bg-rose-500/20 rounded-2xl border border-rose-400/30">
+            SUNFLOWER
+          </div>
+
+          <div class="bg-slate-900/80 p-5 rounded-2xl border border-white/10 mb-6">
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">FORBIDDEN WORDS 🚫</p>
+            <ul id="taboo-forbidden" class="space-y-2 text-lg font-semibold text-slate-200">
+              <li>Yellow</li>
+              <li>Plant</li>
+              <li>Flower</li>
+              <li>Seeds</li>
+            </ul>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <button onclick="nextTabooCard()" class="glass-button py-3 rounded-2xl bg-emerald-500/30 text-emerald-200 font-bold hover:bg-emerald-500/50">
+              <i class="fa-solid fa-check mr-1"></i> Correct!
+            </button>
+            <button onclick="nextTabooCard()" class="glass-button py-3 rounded-2xl bg-rose-500/30 text-rose-200 font-bold hover:bg-rose-500/50">
+              <i class="fa-solid fa-forward mr-1"></i> Skip Card
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GAME 4: 5-SECOND RULE -->
+    <div id="view-fivesec" class="hidden space-y-6">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <button onclick="switchView('dashboard')" class="glass-button px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2">
+          <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
+        </button>
+        <div class="flex items-center gap-2">
+          <select id="fivesec-category-select" onchange="nextFiveSecPrompt()" class="bg-indigo-950 border border-sky-400/40 rounded-xl px-3 py-1.5 text-xs text-sky-200 focus:outline-none">
+            <option value="all">⚡ All Prompts (50+ Challenges)</option>
+            <option value="stem">🧪 STEM & Science</option>
+            <option value="ela">📚 ELA & Vocabulary</option>
+            <option value="social">🗺️ Social Studies</option>
+            <option value="fun">🎈 General & Fun</option>
+          </select>
+          <span class="font-heading text-2xl text-sky-300 font-bold">5-Second Rule</span>
+        </div>
+      </div>
+
+      <div class="max-w-2xl mx-auto glass-panel p-8 rounded-3xl text-center space-y-6 border-2 border-sky-400/30">
+        <!-- Visual Countdown Wheel -->
+        <div class="relative w-40 h-40 mx-auto flex items-center justify-center">
+          <svg class="w-full h-full transform -rotate-90">
+            <circle cx="80" cy="80" r="70" stroke="rgba(255,255,255,0.1)" stroke-width="12" fill="none" />
+            <circle id="fivesec-circle" cx="80" cy="80" r="70" stroke="#38bdf8" stroke-width="12" fill="none" stroke-dasharray="440" stroke-dashoffset="0" class="transition-all duration-1000 ease-linear" />
+          </svg>
+          <span id="fivesec-countdown" class="absolute font-heading text-6xl font-bold text-white">5</span>
+        </div>
+
+        <div class="p-6 bg-slate-900/60 rounded-2xl border border-white/10">
+          <p class="text-xs font-bold text-sky-400 uppercase tracking-widest mb-2">NAME 3...</p>
+          <div id="fivesec-prompt" class="font-heading text-2xl md:text-3xl font-bold text-white">
+            Click "Get Prompt" to Start!
+          </div>
+        </div>
+
+        <div class="flex gap-4">
+          <button onclick="nextFiveSecPrompt()" class="glass-button py-4 rounded-2xl bg-sky-500/30 text-sky-200 font-bold text-lg flex-1 hover:bg-sky-500/50">
+            <i class="fa-solid fa-dice mr-2"></i> New Prompt
+          </button>
+          <button onclick="startFiveSecTimer()" class="glass-button py-4 rounded-2xl bg-rose-500/40 text-rose-200 font-bold text-lg flex-1 hover:bg-rose-500/60">
+            <i class="fa-solid fa-play mr-2"></i> START TIMER!
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- GAME 5: DRAW & GUESS (PICTIONARY) -->
+    <div id="view-pictionary" class="hidden space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <button onclick="switchView('dashboard')" class="glass-button px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2">
+          <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
+        </button>
+        
+        <!-- Prompt Box -->
+        <div class="flex items-center gap-3 bg-purple-950/80 px-4 py-2 rounded-2xl border border-purple-400/30">
+          <select id="pic-category-select" onchange="newPictionaryPrompt()" class="bg-purple-900/60 border border-purple-400/30 rounded-lg px-2 py-1 text-xs text-purple-200 focus:outline-none">
+            <option value="all">🎨 All Prompts (60+ Words)</option>
+            <option value="easy">🟢 Easy / Objects</option>
+            <option value="medium">🟡 Medium / Actions</option>
+            <option value="hard">🔴 Challenge / Abstract</option>
+            <option value="science">🔬 Science & Animals</option>
+          </select>
+          <span class="text-xs font-bold text-purple-300 uppercase">Prompt:</span>
+          <span id="pictionary-prompt" class="font-heading font-bold text-white text-lg">???</span>
+          <button onclick="newPictionaryPrompt()" class="text-xs text-purple-300 hover:text-white underline ml-2">Reveal New</button>
+        </div>
+
+        <!-- Canvas Controls -->
+        <div class="flex items-center gap-2 bg-slate-900/80 p-1.5 rounded-2xl border border-white/10">
+          <input type="color" id="draw-color" value="#38bdf8" class="w-8 h-8 rounded cursor-pointer bg-transparent border-none" />
+          <input type="range" id="draw-size" min="2" max="24" value="6" class="w-20 accent-purple-400" />
+          <button onclick="clearCanvas()" class="glass-button px-3 py-1 rounded-xl text-xs font-bold text-rose-300">Clear Board</button>
+        </div>
+      </div>
+
+      <!-- Canvas Area -->
+      <div class="glass-panel p-2 rounded-3xl border border-purple-500/30">
+        <canvas id="drawing-canvas" class="w-full h-[450px] bg-slate-950 rounded-2xl cursor-crosshair touch-none"></canvas>
+      </div>
+    </div>
+
+    <!-- GAME 6: CLASSROOM WORDLE -->
+    <div id="view-wordle" class="hidden space-y-6">
+      <div class="flex items-center justify-between">
+        <button onclick="switchView('dashboard')" class="glass-button px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2">
+          <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
+        </button>
+        <button onclick="resetWordleGame()" class="glass-button px-3 py-1.5 rounded-xl text-xs font-bold text-teal-300">
+          <i class="fa-solid fa-arrows-rotate mr-1"></i> New Game
+        </button>
+      </div>
+
+      <div class="max-w-md mx-auto space-y-4">
+        <!-- Wordle Grid -->
+        <div id="wordle-board" class="grid grid-rows-6 gap-2">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- On Screen Keyboard -->
+        <div id="wordle-keyboard" class="space-y-1.5 pt-2">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- GAME 7: WOULD YOU RATHER -->
+    <div id="view-wyr" class="hidden space-y-6">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <button onclick="switchView('dashboard')" class="glass-button px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2">
+          <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
+        </button>
+        <div class="flex flex-wrap items-center gap-2">
+          <select id="wyr-category-select" onchange="filterWYRCategory()" class="bg-indigo-950 border border-pink-400/40 rounded-xl px-3 py-1.5 text-xs text-pink-200 focus:outline-none">
+            <option value="all">🌟 All Categories (25+ Prompts)</option>
+            <option value="superpowers">⚡ Silly Superpowers</option>
+            <option value="adventure">🚀 Time & Space Adventure</option>
+            <option value="school">🏫 School & Life Scenarios</option>
+            <option value="animals">🦁 Animals & Nature</option>
+            <option value="food">🍕 Food & Flavor Debates</option>
+          </select>
+          <button onclick="nextWYRPrompt()" class="glass-button px-4 py-2 rounded-xl text-sm font-bold text-pink-300">
+            <i class="fa-solid fa-shuffle mr-1"></i> Next Scenario
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+        <!-- Option A -->
+        <div onclick="voteWYR('A')" class="glass-panel p-8 rounded-3xl border-2 border-pink-500/40 text-center cursor-pointer hover:bg-pink-500/10 transition-all flex flex-col justify-between group">
+          <div>
+            <span class="px-3 py-1 rounded-full bg-pink-500/20 text-pink-300 text-xs font-bold uppercase tracking-wider">Option A</span>
+            <div id="wyr-option-a" class="font-heading text-2xl md:text-3xl font-bold text-white my-6">
+              Option A Prompt...
+            </div>
+          </div>
+          <div>
+            <div class="w-full bg-slate-900 rounded-full h-4 overflow-hidden border border-white/10 mb-2">
+              <div id="wyr-bar-a" class="bg-pink-500 h-full transition-all duration-500" style="width: 50%"></div>
+            </div>
+            <span id="wyr-count-a" class="text-sm font-bold text-pink-300">0 Votes (50%)</span>
+          </div>
+        </div>
+
+        <!-- Option B -->
+        <div onclick="voteWYR('B')" class="glass-panel p-8 rounded-3xl border-2 border-purple-500/40 text-center cursor-pointer hover:bg-purple-500/10 transition-all flex flex-col justify-between group">
+          <div>
+            <span class="px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs font-bold uppercase tracking-wider">Option B</span>
+            <div id="wyr-option-b" class="font-heading text-2xl md:text-3xl font-bold text-white my-6">
+              Option B Prompt...
+            </div>
+          </div>
+          <div>
+            <div class="w-full bg-slate-900 rounded-full h-4 overflow-hidden border border-white/10 mb-2">
+              <div id="wyr-bar-b" class="bg-purple-500 h-full transition-all duration-500" style="width: 50%"></div>
+            </div>
+            <span id="wyr-count-b" class="text-sm font-bold text-purple-300">0 Votes (50%)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GAME 8: TRIVIA WHEEL -->
+    <div id="view-wheel" class="hidden space-y-6">
+      <div class="flex items-center justify-between">
+        <button onclick="switchView('dashboard')" class="glass-button px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-2">
+          <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
+        </button>
+        <span class="font-heading text-2xl text-indigo-300 font-bold">Wheel of Knowledge</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+        <!-- Canvas Wheel -->
+        <div class="glass-panel p-6 rounded-3xl flex flex-col items-center relative">
+          <div class="w-0 h-0 border-l-[15px] border-l-transparent border-r-[15px] border-r-transparent border-t-[25px] border-t-amber-400 absolute top-4 z-10"></div>
+          <canvas id="wheel-canvas" width="340" height="340" class="max-w-full"></canvas>
+          <button onclick="spinTriviaWheel()" class="glass-button px-8 py-3 rounded-2xl bg-indigo-500/40 text-indigo-200 font-bold text-lg mt-4 hover:bg-indigo-500/60">
+            <i class="fa-solid fa-arrows-spin mr-2"></i> SPIN WHEEL!
+          </button>
+        </div>
+
+        <!-- Question Card Display -->
+        <div class="glass-panel p-6 rounded-3xl space-y-4 text-center">
+          <span id="wheel-category-badge" class="px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-bold uppercase tracking-widest">
+            Spin to Select Category
+          </span>
+          <div id="wheel-question-box" class="font-heading text-xl md:text-2xl font-bold text-white min-h-[100px] flex items-center justify-center p-4 bg-slate-900/60 rounded-2xl border border-white/10">
+            Click "SPIN WHEEL" to land on a category prompt!
+          </div>
+          <button id="wheel-answer-btn" onclick="toggleWheelAnswer()" class="glass-button px-4 py-2 rounded-xl text-sm font-bold text-amber-300 hidden">
+            Show Answer
+          </button>
+          <div id="wheel-answer-box" class="text-emerald-400 font-bold text-lg hidden pt-2"></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- MODAL: RANDOM NAME PICKER -->
+  <div id="modal-namepicker" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-panel max-w-md w-full p-6 rounded-3xl space-y-4 relative border border-emerald-500/30">
+      <button onclick="closeNamePicker()" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+      <h3 class="font-heading text-2xl font-bold text-emerald-300">Classroom Name Picker</h3>
+      
+      <div id="picker-display" class="font-heading text-3xl font-extrabold text-center py-8 bg-slate-900/80 rounded-2xl border border-white/10 text-white min-h-[100px] flex items-center justify-center">
+        Ready to Pick!
+      </div>
+
+      <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-400 uppercase">Student List (comma separated)</label>
+        <textarea id="student-names-input" class="w-full h-24 p-3 rounded-xl bg-slate-900/60 border border-white/10 text-sm text-slate-200 focus:outline-none resize-none">Alex, Sarah, David, Maya, Leo, Emma, Lucas, Chloe, Ethan, Zoe</textarea>
+      </div>
+
+      <button onclick="pickRandomStudent()" class="glass-button py-3 rounded-2xl bg-emerald-500/40 text-emerald-100 font-bold text-lg w-full hover:bg-emerald-500/60">
+        <i class="fa-solid fa-wand-magic-sparkles mr-2"></i> Pick Random Student
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL: SOUNDBOARD -->
+  <div id="modal-soundboard" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-panel max-w-sm w-full p-6 rounded-3xl space-y-4 relative border border-sky-500/30">
+      <button onclick="closeSoundboard()" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+      <h3 class="font-heading text-2xl font-bold text-sky-300">Classroom Soundboard</h3>
+      
+      <div class="grid grid-cols-2 gap-3 pt-2">
+        <button onclick="playSFX('cheer')" class="glass-button p-4 rounded-2xl text-amber-300 font-bold flex flex-col items-center gap-2">
+          <i class="fa-solid fa-hands-clapping text-2xl"></i> Applause
+        </button>
+        <button onclick="playSFX('buzzer')" class="glass-button p-4 rounded-2xl text-rose-300 font-bold flex flex-col items-center gap-2">
+          <i class="fa-solid fa-circle-xmark text-2xl"></i> Buzzer
+        </button>
+        <button onclick="playSFX('chime')" class="glass-button p-4 rounded-2xl text-emerald-300 font-bold flex flex-col items-center gap-2">
+          <i class="fa-solid fa-bell text-2xl"></i> Correct Chime
+        </button>
+        <button onclick="playSFX('drumroll')" class="glass-button p-4 rounded-2xl text-purple-300 font-bold flex flex-col items-center gap-2">
+          <i class="fa-solid fa-drum text-2xl"></i> Drumroll
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* Web Audio API Sound Synthesizer (No external audio files required) */
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playTone(freq, duration, type = 'sine', volume = 0.1) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function playSFX(type) {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      if (type === 'chime') {
+        playTone(523.25, 0.2, 'triangle', 0.2);
+        setTimeout(() => playTone(659.25, 0.2, 'triangle', 0.2), 100);
+        setTimeout(() => playTone(783.99, 0.4, 'triangle', 0.2), 200);
+      } else if (type === 'buzzer') {
+        playTone(150, 0.5, 'sawtooth', 0.25);
+      } else if (type === 'cheer') {
+        for (let i = 0; i < 6; i++) {
+          setTimeout(() => playTone(400 + Math.random() * 400, 0.15, 'sine', 0.1), i * 60);
+        }
+      } else if (type === 'drumroll') {
+        for (let i = 0; i < 12; i++) {
+          setTimeout(() => playTone(100 + Math.random() * 40, 0.05, 'square', 0.08), i * 50);
+        }
+      }
+    }
+
+    // View Switcher
+    function switchView(viewId) {
+      const views = ['dashboard', 'scattergories', 'boggle', 'taboo', 'fivesec', 'pictionary', 'wordle', 'wyr', 'wheel'];
+      views.forEach(v => {
+        const el = document.getElementById(`view-${v}`);
+        if (el) el.classList.add('hidden');
+      });
+      const activeEl = document.getElementById(`view-${viewId}`);
+      if (activeEl) activeEl.classList.remove('hidden');
+
+      // Specific initializations
+      if (viewId === 'pictionary') initPictionaryCanvas();
+      if (viewId === 'wordle' && !wordleInitialized) initWordleBoard();
+      if (viewId === 'wheel') drawWheel();
+    }
+
+    // Scoreboard Drawer Toggle
+    function toggleScoreboard() {
+      const drawer = document.getElementById('scoreboard-drawer');
+      drawer.classList.toggle('hidden');
+    }
+
+    function adjustScore(teamNum, delta) {
+      const scoreEl = document.getElementById(`score-team-${teamNum}`);
+      let current = parseInt(scoreEl.innerText) || 0;
+      current = Math.max(0, current + delta);
+      scoreEl.innerText = current;
+      playSFX('chime');
+    }
+
+    // Global Floating Timer
+    let globalTimerSeconds = 300;
+    let globalTimerInterval = null;
+
+    function toggleGlobalTimer() {
+      if (globalTimerInterval) {
+        clearInterval(globalTimerInterval);
+        globalTimerInterval = null;
+      } else {
+        globalTimerInterval = setInterval(() => {
+          if (globalTimerSeconds > 0) {
+            globalTimerSeconds--;
+            updateGlobalTimerDisplay();
+          } else {
+            clearInterval(globalTimerInterval);
+            globalTimerInterval = null;
+            playSFX('buzzer');
+          }
+        }, 1000);
+      }
+    }
+
+    function updateGlobalTimerDisplay() {
+      const mins = Math.floor(globalTimerSeconds / 60).toString().padStart(2, '0');
+      const secs = (globalTimerSeconds % 60).toString().padStart(2, '0');
+      document.getElementById('global-timer-display').innerText = `${mins}:${secs}`;
+    }
+
+    // Name Picker Modal
+    function openNamePicker() { document.getElementById('modal-namepicker').classList.remove('hidden'); }
+    function closeNamePicker() { document.getElementById('modal-namepicker').classList.add('hidden'); }
+    function openSoundboard() { document.getElementById('modal-soundboard').classList.remove('hidden'); }
+    function closeSoundboard() { document.getElementById('modal-soundboard').classList.add('hidden'); }
+
+    function pickRandomStudent() {
+      const raw = document.getElementById('student-names-input').value;
+      const names = raw.split(',').map(s => s.trim()).filter(s => s.length > 0);
+      if (names.length === 0) return;
+
+      const display = document.getElementById('picker-display');
+      let count = 0;
+      playSFX('drumroll');
+      const interval = setInterval(() => {
+        display.innerText = names[Math.floor(Math.random() * names.length)];
+        count++;
+        if (count > 15) {
+          clearInterval(interval);
+          playSFX('chime');
+        }
+      }, 100);
+    }
+
+    // SCATTERGORIES (60+ Topics & Categories)
+    const scatTopicsPool = [
+      // STEM
+      { cat: 'stem', text: "Things found in outer space" },
+      { cat: 'stem', text: "Types of weather or natural phenomena" },
+      { cat: 'stem', text: "Animals that live in water" },
+      { cat: 'stem', text: "Parts of the human body" },
+      { cat: 'stem', text: "Insects or bugs" },
+      { cat: 'stem', text: "Things that use electricity" },
+      { cat: 'stem', text: "Chemical elements or laboratory tools" },
+      { cat: 'stem', text: "Types of trees or flowers" },
+      { cat: 'stem', text: "Reptiles or Amphibians" },
+      { cat: 'stem', text: "Scientific measurements or units" },
+      { cat: 'stem', text: "Sources of energy" },
+      { cat: 'stem', text: "Dinosaurs or extinct creatures" },
+
+      // ELA
+      { cat: 'ela', text: "Action verbs ending in -ING" },
+      { cat: 'ela', text: "Adjectives that describe texture" },
+      { cat: 'ela', text: "Compound words" },
+      { cat: 'ela', text: "Book titles or famous characters" },
+      { cat: 'ela', text: "Words with double letters (e.g., Book)" },
+      { cat: 'ela', text: "Types of writing or genres" },
+      { cat: 'ela', text: "Palindromes or Rhyming pairs" },
+      { cat: 'ela', text: "Poetry terms or literary devices" },
+      { cat: 'ela', text: "Words with 4 or more syllables" },
+      { cat: 'ela', text: "Synonyms for 'HAPPY' or 'FAST'" },
+      { cat: 'ela', text: "Proper nouns / Name of a famous author" },
+      { cat: 'ela', text: "Words borrowed from another language" },
+
+      // SOCIAL STUDIES
+      { cat: 'social', text: "Countries in Asia or Europe" },
+      { cat: 'social', text: "US States or Capital cities" },
+      { cat: 'social', text: "Historical figures or leaders" },
+      { cat: 'social', text: "Types of terrain or landforms" },
+      { cat: 'social', text: "Rivers, Lakes, or Oceans" },
+      { cat: 'social', text: "Modes of transportation throughout history" },
+      { cat: 'social', text: "Inventions or technological discoveries" },
+      { cat: 'social', text: "Languages spoken around the world" },
+      { cat: 'social', text: "Historical events or wars" },
+      { cat: 'social', text: "Monuments or famous landmarks" },
+      { cat: 'social', text: "Currencies or types of money" },
+      { cat: 'social', text: "Ancient civilizations" },
+
+      // EVERYDAY & FUN
+      { cat: 'fun', text: "Things found in a school cafeteria" },
+      { cat: 'fun', text: "Breakfast foods or snacks" },
+      { cat: 'fun', text: "Types of sports or athletic events" },
+      { cat: 'fun', text: "Things you pack for a beach trip" },
+      { cat: 'fun', text: "Items found inside a backpack" },
+      { cat: 'fun', text: "Things that are bright red or yellow" },
+      { cat: 'fun', text: "Flavors of ice cream or candy" },
+      { cat: 'fun', text: "Board games or video games" },
+      { cat: 'fun', text: "Jobs or dream professions" },
+      { cat: 'fun', text: "Things that make a loud noise" },
+      { cat: 'fun', text: "Things made of metal or glass" },
+      { cat: 'fun', text: "Holidays or celebrations" },
+      { cat: 'fun', text: "Musical instruments" },
+      { cat: 'fun', text: "Things in a living room" },
+      { cat: 'fun', text: "Cartoon characters or superheroes" },
+      { cat: 'fun', text: "Things that melt" }
+    ];
+
+    let scatDeck = [];
+
+    function rollScattergoriesLetter() {
+      const letters = "ABCDEFGHIJKLMNOPRSTW";
+      const display = document.getElementById('scat-letter');
+      let ticks = 0;
+      const interval = setInterval(() => {
+        display.innerText = letters[Math.floor(Math.random() * letters.length)];
+        ticks++;
+        if (ticks > 12) {
+          clearInterval(interval);
+          playSFX('chime');
+        }
+      }, 80);
+    }
+
+    function generateScattergoriesTopics() {
+      const selectedCat = document.getElementById('scat-category-select')?.value || 'all';
+
+      if (!scatDeck || scatDeck.length < 5) {
+        const filtered = selectedCat === 'all' 
+          ? [...scatTopicsPool] 
+          : scatTopicsPool.filter(t => t.cat === selectedCat);
+        
+        scatDeck = (filtered.length >= 5 ? filtered : [...scatTopicsPool]).sort(() => 0.5 - Math.random());
+      }
+
+      const selectedTopics = [];
+      for (let i = 0; i < 5; i++) {
+        if (scatDeck.length > 0) {
+          selectedTopics.push(scatDeck.pop().text);
+        }
+      }
+
+      const listEl = document.getElementById('scat-topics-list');
+      listEl.innerHTML = selectedTopics.map(topic => `<li class="p-3 bg-white/5 rounded-xl border border-white/10 font-semibold text-amber-200">${topic}</li>`).join('');
+      playSFX('chime');
+    }
+
+    // WORD GRID (BOGGLE)
+    function generateBoggleGrid() {
+      const vowels = "AEIOU";
+      const consonants = "BCDFGHJKLMNPQRSTVWYZ";
+      const gridEl = document.getElementById('boggle-grid');
+      gridEl.innerHTML = '';
+
+      for (let i = 0; i < 16; i++) {
+        const isVowel = (i % 3 === 0) || Math.random() < 0.3;
+        const char = isVowel ? vowels[Math.floor(Math.random() * vowels.length)] : consonants[Math.floor(Math.random() * consonants.length)];
+        const cell = document.createElement('div');
+        cell.className = "h-16 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center font-heading text-3xl font-bold text-white shadow-md";
+        cell.innerText = char;
+        gridEl.appendChild(cell);
+      }
+      playSFX('chime');
+    }
+
+    // DON'T SAY IT! (50+ Cards)
+    const tabooCardsBank = [
+      // General
+      { cat: 'general', word: 'PIZZA', forbidden: ['Cheese', 'Slice', 'Pepperoni', 'Italian'] },
+      { cat: 'general', word: 'TEACHER', forbidden: ['School', 'Class', 'Homework', 'Grade'] },
+      { cat: 'general', word: 'AIRPORT', forbidden: ['Plane', 'Fly', 'Luggage', 'Ticket'] },
+      { cat: 'general', word: 'IPHONE', forbidden: ['Apple', 'Phone', 'Screen', 'App'] },
+      { cat: 'general', word: 'CAMPING', forbidden: ['Tent', 'Fire', 'Forest', 'Sleep'] },
+      { cat: 'general', word: 'SUPERMARKET', forbidden: ['Buy', 'Food', 'Cart', 'Store'] },
+      { cat: 'general', word: 'BICYCLE', forbidden: ['Pedal', 'Wheel', 'Helmet', 'Ride'] },
+      { cat: 'general', word: 'BIRTHDAY', forbidden: ['Cake', 'Candles', 'Party', 'Presents'] },
+      { cat: 'general', word: 'POP-CORN', forbidden: ['Movie', 'Butter', 'Kernels', 'Snack'] },
+      { cat: 'general', word: 'RAINBOW', forbidden: ['Colors', 'Sky', 'Rain', 'Sun'] },
+
+      // Science & Nature
+      { cat: 'science', word: 'GRAVITY', forbidden: ['Fall', 'Earth', 'Space', 'Down'] },
+      { cat: 'science', word: 'PHOTOSYNTHESIS', forbidden: ['Plant', 'Sun', 'Green', 'Leaves'] },
+      { cat: 'science', word: 'VOLCANO', forbidden: ['Lava', 'Erupt', 'Mountain', 'Ash'] },
+      { cat: 'science', word: 'MOLECULE', forbidden: ['Atom', 'Chemistry', 'Bond', 'Tiny'] },
+      { cat: 'science', word: 'ECLIPSE', forbidden: ['Sun', 'Moon', 'Shadow', 'Dark'] },
+      { cat: 'science', word: 'ELECTRICITY', forbidden: ['Power', 'Wire', 'Current', 'Light'] },
+      { cat: 'science', word: 'FOSSIL', forbidden: ['Dinosaur', 'Bones', 'Rock', 'Ancient'] },
+      { cat: 'science', word: 'EVAPORATION', forbidden: ['Water', 'Gas', 'Heat', 'Steam'] },
+      { cat: 'science', word: 'TELESCOPE', forbidden: ['Stars', 'Space', 'Look', 'Planet'] },
+      { cat: 'science', word: 'ECOSYSTEM', forbidden: ['Animals', 'Habitat', 'Nature', 'Environment'] },
+
+      // History & Social Studies
+      { cat: 'history', word: 'PYRAMID', forbidden: ['Egypt', 'Pharaoh', 'Triangle', 'Ancient'] },
+      { cat: 'history', word: 'CASTLE', forbidden: ['King', 'Knight', 'Stone', 'Moat'] },
+      { cat: 'history', word: 'DECLARATION', forbidden: ['Freedom', 'America', 'July', 'Independence'] },
+      { cat: 'history', word: 'ASTRONAUT', forbidden: ['NASA', 'Moon', 'Space', 'Suit'] },
+      { cat: 'history', word: 'VIKING', forbidden: ['Ship', 'Warrior', 'Norway', 'Helmet'] },
+      { cat: 'history', word: 'MUSEUM', forbidden: ['History', 'Art', 'Exhibit', 'Old'] },
+      { cat: 'history', word: 'DEMOCRACY', forbidden: ['Vote', 'Election', 'Government', 'People'] },
+      { cat: 'history', word: 'COLOSSEUM', forbidden: ['Rome', 'Gladiator', 'Arena', 'Italy'] },
+      { cat: 'history', word: 'INVENTION', forbidden: ['Create', 'New', 'Patent', 'Idea'] },
+      { cat: 'history', word: 'EMPIRE', forbidden: ['Emperor', 'Rule', 'Land', 'Conquer'] },
+
+      // Literature & Language
+      { cat: 'literature', word: 'DICTIONARY', forbidden: ['Words', 'Define', 'Alphabet', 'Book'] },
+      { cat: 'literature', word: 'METAPHOR', forbidden: ['Like', 'As', 'Comparison', 'Poem'] },
+      { cat: 'literature', word: 'SHAKESPEARE', forbidden: ['Play', 'Hamlet', 'Actor', 'Writer'] },
+      { cat: 'literature', word: 'BIOGRAPHY', forbidden: ['Life', 'Story', 'Person', 'Real'] },
+      { cat: 'literature', word: 'LIBRARY', forbidden: ['Books', 'Read', 'Quiet', 'Borrow'] },
+      { cat: 'literature', word: 'CHARACTER', forbidden: ['Story', 'Book', 'Person', 'Hero'] },
+      { cat: 'literature', word: 'ALLITERATION', forbidden: ['Sounds', 'Letters', 'Repeat', 'Tongue'] },
+      { cat: 'literature', word: 'MYSTERY', forbidden: ['Secret', 'Clue', 'Detective', 'Solve'] },
+
+      // Geography & Places
+      { cat: 'geography', word: 'RAINFOREST', forbidden: ['Trees', 'Amazon', 'Jungle', 'Green'] },
+      { cat: 'geography', word: 'GLACIER', forbidden: ['Ice', 'Cold', 'Melt', 'Snow'] },
+      { cat: 'geography', word: 'EQUATOR', forbidden: ['Middle', 'Earth', 'Hot', 'Line'] },
+      { cat: 'geography', word: 'ISLAND', forbidden: ['Water', 'Ocean', 'Beach', 'Land'] },
+      { cat: 'geography', word: 'DESERT', forbidden: ['Sand', 'Dry', 'Cactus', 'Hot'] },
+      { cat: 'geography', word: 'PENINSULA', forbidden: ['Water', 'Land', 'Florida', 'Three'] },
+      { cat: 'geography', word: 'MOUNTAIN', forbidden: ['Peak', 'Climb', 'Everest', 'High'] },
+      { cat: 'geography', word: 'CANYON', forbidden: ['Grand', 'Rock', 'Valley', 'River'] }
+    ];
+
+    let tabooDeck = [];
+
+    function nextTabooCard() {
+      const catSelect = document.getElementById('taboo-category-select').value;
+      
+      if (!tabooDeck || tabooDeck.length === 0) {
+        const filtered = catSelect === 'all' 
+          ? [...tabooCardsBank] 
+          : tabooCardsBank.filter(c => c.cat === catSelect);
+        
+        tabooDeck = (filtered.length > 0 ? filtered : [...tabooCardsBank]).sort(() => Math.random() - 0.5);
+      }
+
+      const card = tabooDeck.pop();
+      document.getElementById('taboo-target').innerText = card.word;
+      const listEl = document.getElementById('taboo-forbidden');
+      listEl.innerHTML = card.forbidden.map(w => `<li>${w}</li>`).join('');
+      playSFX('chime');
+    }
+
+    // 5-SECOND RULE (50+ Prompts)
+    const fiveSecPromptsBank = [
+      // STEM
+      { cat: 'stem', text: "Yellow Foods or Vegetables" },
+      { cat: 'stem', text: "Types of Trees or Plants" },
+      { cat: 'stem', text: "Animals with Whiskers" },
+      { cat: 'stem', text: "Things found in a Science Lab" },
+      { cat: 'stem', text: "Planets or Astronomical Objects" },
+      { cat: 'stem', text: "Things that spin or rotate" },
+      { cat: 'stem', text: "Creatures that live underwater" },
+      { cat: 'stem', text: "Organs inside the human body" },
+      { cat: 'stem', text: "Things that fly (natural or man-made)" },
+      { cat: 'stem', text: "Sources of light" },
+      { cat: 'stem', text: "Things that are transparent or clear" },
+      { cat: 'stem', text: "Reptiles or Amphibians" },
+
+      // ELA
+      { cat: 'ela', text: "Words starting with the letter 'S'" },
+      { cat: 'ela', text: "Famous fictional characters" },
+      { cat: 'ela', text: "Words that rhyme with 'CAT'" },
+      { cat: 'ela', text: "Action verbs ending in -ED" },
+      { cat: 'ela', text: "Types of punctuation marks" },
+      { cat: 'ela', text: "Authors or Book Series" },
+      { cat: 'ela', text: "Compound words" },
+      { cat: 'ela', text: "Adjectives to describe the weather" },
+      { cat: 'ela', text: "Words with 3 or more vowels" },
+      { cat: 'ela', text: "Synonyms for 'BIG' or 'SMALL'" },
+
+      // SOCIAL STUDIES
+      { cat: 'social', text: "Countries in Europe or South America" },
+      { cat: 'social', text: "US States or World Capitals" },
+      { cat: 'social', text: "Transportation vehicles" },
+      { cat: 'social', text: "Languages spoken in the world" },
+      { cat: 'social', text: "Types of landforms (e.g., Island)" },
+      { cat: 'social', text: "Historical US Presidents" },
+      { cat: 'social', text: "Currencies or Coins" },
+      { cat: 'social', text: "Ocean names or seas" },
+      { cat: 'social', text: "Inventions used every day" },
+
+      // FUN & GENERAL
+      { cat: 'fun', text: "Pizza toppings" },
+      { cat: 'fun', text: "Superhero powers" },
+      { cat: 'fun', text: "Things found in an Airport" },
+      { cat: 'fun', text: "Things with Wheels" },
+      { cat: 'fun', text: "Flavors of Ice Cream" },
+      { cat: 'fun', text: "Sports played with a ball" },
+      { cat: 'fun', text: "Things in your bedroom" },
+      { cat: 'fun', text: "Breakfast foods" },
+      { cat: 'fun', text: "Things you wear on your feet" },
+      { cat: 'fun', text: "Types of candy or sweets" },
+      { cat: 'fun', text: "Musical instruments" },
+      { cat: 'fun', text: "Things that melt in the sun" },
+      { cat: 'fun', text: "Board games or video games" },
+      { cat: 'fun', text: "Things you find at a zoo" },
+      { cat: 'fun', text: "Things that cost less than $5" }
+    ];
+
+    let fiveSecDeck = [];
+    let fiveSecInterval = null;
+
+    function nextFiveSecPrompt() {
+      const selectedCat = document.getElementById('fivesec-category-select')?.value || 'all';
+
+      if (!fiveSecDeck || fiveSecDeck.length === 0) {
+        const filtered = selectedCat === 'all'
+          ? [...fiveSecPromptsBank]
+          : fiveSecPromptsBank.filter(p => p.cat === selectedCat);
+        
+        fiveSecDeck = (filtered.length > 0 ? filtered : [...fiveSecPromptsBank]).sort(() => Math.random() - 0.5);
+      }
+
+      const p = fiveSecDeck.pop();
+      document.getElementById('fivesec-prompt').innerText = p.text;
+      resetFiveSecTimer();
+    }
+
+    function resetFiveSecTimer() {
+      if (fiveSecInterval) clearInterval(fiveSecInterval);
+      fiveSecInterval = null;
+      document.getElementById('fivesec-countdown').innerText = '5';
+      document.getElementById('fivesec-circle').style.strokeDashoffset = '0';
+    }
+
+    function startFiveSecTimer() {
+      resetFiveSecTimer();
+      let left = 5;
+      const circle = document.getElementById('fivesec-circle');
+      const totalOffset = 440;
+
+      fiveSecInterval = setInterval(() => {
+        left--;
+        document.getElementById('fivesec-countdown').innerText = left;
+        circle.style.strokeDashoffset = totalOffset - (totalOffset * ((5 - left) / 5));
+        
+        if (left > 0) {
+          playTone(600, 0.1, 'sine', 0.1);
+        } else {
+          clearInterval(fiveSecInterval);
+          fiveSecInterval = null;
+          playSFX('buzzer');
+        }
+      }, 1000);
+    }
+
+    // DRAW & GUESS (PICTIONARY - 60+ Prompts)
+    const picPromptsBank = [
+      // Easy / Objects
+      { cat: 'easy', text: "Cat" }, { cat: 'easy', text: "Bicycle" }, { cat: 'easy', text: "Ice Cream" },
+      { cat: 'easy', text: "Guitar" }, { cat: 'easy', text: "Sun" }, { cat: 'easy', text: "House" },
+      { cat: 'easy', text: "Pizza" }, { cat: 'easy', text: "Car" }, { cat: 'easy', text: "Tree" },
+      { cat: 'easy', text: "Clock" }, { cat: 'easy', text: "Book" }, { cat: 'easy', text: "Fish" },
+
+      // Medium / Actions
+      { cat: 'medium', text: "Rocket" }, { cat: 'medium', text: "Volcano" }, { cat: 'medium', text: "Robot" },
+      { cat: 'medium', text: "Skateboarder" }, { cat: 'medium', text: "Astronaut" }, { cat: 'medium', text: "Submarine" },
+      { cat: 'medium', text: "Campfire" }, { cat: 'medium', text: "Windmill" }, { cat: 'medium', text: "Tornado" },
+      { cat: 'medium', text: "Lighthouse" }, { cat: 'medium', text: "Helicopter" }, { cat: 'medium', text: "Scuba Diver" },
+
+      // Hard / Abstract
+      { cat: 'hard', text: "Eiffel Tower" }, { cat: 'hard', text: "Gravity" }, { cat: 'hard', text: "Time Travel" },
+      { cat: 'hard', text: "Solar Eclipse" }, { cat: 'hard', text: "Brainstorm" }, { cat: 'hard', text: "Electric Current" },
+      { cat: 'hard', text: "Constellation" }, { cat: 'hard', text: "Photosynthesis" }, { cat: 'hard', text: "Soundwave" },
+      { cat: 'hard', text: "Black Hole" }, { cat: 'hard', text: "Virtual Reality" }, { cat: 'hard', text: "Archaeology" },
+
+      // Science & Nature
+      { cat: 'science', text: "Tyrannosaurus" }, { cat: 'science', text: "Octopus" }, { cat: 'science', text: "Microscope" },
+      { cat: 'science', text: "DNA Strand" }, { cat: 'science', text: "Cactus" }, { cat: 'science', text: "Penguin" },
+      { cat: 'science', text: "Chameleon" }, { cat: 'science', text: "Saturn Ring" }, { cat: 'science', text: "Atom" },
+      { cat: 'science', text: "Jellyfish" }, { cat: 'science', text: "Magnet" }, { cat: 'science', text: "Butterfly Life Cycle" }
+    ];
+
+    let picDeck = [];
+    let canvas, ctx, isDrawing = false;
+
+    function initPictionaryCanvas() {
+      canvas = document.getElementById('drawing-canvas');
+      ctx = canvas.getContext('2d');
+      
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      canvas.onmousedown = (e) => { isDrawing = true; draw(e); };
+      canvas.onmousemove = draw;
+      canvas.onmouseup = () => isDrawing = false;
+
+      canvas.ontouchstart = (e) => { isDrawing = true; draw(e.touches[0]); };
+      canvas.ontouchmove = (e) => draw(e.touches[0]);
+      canvas.ontouchend = () => isDrawing = false;
+
+      newPictionaryPrompt();
+    }
+
+    function draw(e) {
+      if (!isDrawing) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      ctx.strokeStyle = document.getElementById('draw-color').value;
+      ctx.lineWidth = document.getElementById('draw-size').value;
+
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+    }
+
+    function clearCanvas() {
+      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function newPictionaryPrompt() {
+      const selectedCat = document.getElementById('pic-category-select')?.value || 'all';
+
+      if (!picDeck || picDeck.length === 0) {
+        const filtered = selectedCat === 'all'
+          ? [...picPromptsBank]
+          : picPromptsBank.filter(p => p.cat === selectedCat);
+        
+        picDeck = (filtered.length > 0 ? filtered : [...picPromptsBank]).sort(() => Math.random() - 0.5);
+      }
+
+      const p = picDeck.pop();
+      document.getElementById('pictionary-prompt').innerText = p.text;
+      clearCanvas();
+    }
+
+    // CLASSROOM WORDLE (100+ School Words)
+    const wordleList = [
+      "BRAIN", "CLASS", "LEARN", "SMART", "PAPER", "PENCIL", "TEACH", "THINK", "SOLAR", "OXYGEN",
+      "GLOBE", "GRAPH", "ANGLE", "FRACTION", "NOVEL", "RHYME", "DRAFT", "COUNT", "SCORE", "WORLD",
+      "SPACE", "PLANT", "LIGHT", "WATER", "EARTH", "FORCE", "SOUND", "PROOF", "TOPIC", "STORY",
+      "CHALK", "CLOCK", "STUDY", "GRADE", "WRITE", "SOLVE", "SCALE", "CHART", "PRISM", "ROBOT",
+      "FLEET", "CROWN", "SHIELD", "SWORD", "TOWER", "KINGDOM", "ORBIT", "COMET", "MARS", "VENUS",
+      "MAPLE", "OCEAN", "RIVER", "BEACH", "STORM", "CLOUD", "RAIN", "SNOWY", "FROST", "FLAME",
+      "LAVA", "MAGMA", "DESERT", "JUNGLE", "ANIMAL", "TIGER", "EAGLE", "WHALE", "SHARK", "SHERIFF",
+      "LOGIC", "CHECK", "GUESS", "MATCH", "BOARD", "GAMES", "TEAM", "POINT", "PRIZE", "WINNER",
+      "CIVIC", "STATE", "JUDGE", "LAW", "RIGHT", "PEACE", "TRUTH", "TRUST", "POWER", "ENERG"
+    ];
+    let wordleDeck = [];
+    let targetWordle = "SMART";
+    let wordleRow = 0;
+    let wordleCol = 0;
+    let currentGuess = "";
+    let wordleInitialized = false;
+
+    function initWordleBoard() {
+      wordleInitialized = true;
+      if (!wordleDeck || wordleDeck.length === 0) {
+        wordleDeck = [...wordleList].sort(() => Math.random() - 0.5);
+      }
+      targetWordle = wordleDeck.pop();
+      wordleRow = 0;
+      wordleCol = 0;
+      currentGuess = "";
+
+      const board = document.getElementById('wordle-board');
+      board.innerHTML = '';
+      for (let r = 0; r < 6; r++) {
+        const row = document.createElement('div');
+        row.className = 'grid grid-cols-5 gap-2';
+        for (let c = 0; c < 5; c++) {
+          const tile = document.createElement('div');
+          tile.id = `w-tile-${r}-${c}`;
+          tile.className = 'h-12 border-2 border-white/20 rounded-xl flex items-center justify-center font-heading text-2xl font-bold uppercase text-white bg-slate-900/40';
+          row.appendChild(tile);
+        }
+        board.appendChild(row);
+      }
+
+      const keys = ["QWERTYUIOP", "ASDFGHJKL", ["ENTER", ..."ZXCVBNM", "DEL"]];
+      const kb = document.getElementById('wordle-keyboard');
+      kb.innerHTML = '';
+      keys.forEach(rowKeys => {
+        const row = document.createElement('div');
+        row.className = 'flex justify-center gap-1';
+        const arr = typeof rowKeys === 'string' ? rowKeys.split('') : rowKeys;
+        arr.forEach(k => {
+          const btn = document.createElement('button');
+          btn.className = 'px-2 py-3 rounded-lg bg-white/10 hover:bg-white/20 font-bold text-xs text-white min-w-[32px]';
+          btn.innerText = k;
+          btn.onclick = () => handleWordleKey(k);
+          row.appendChild(btn);
         });
+        kb.appendChild(row);
+      });
+    }
 
-        function showToast(message) {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.innerText = message;
-            container.appendChild(toast);
-            setTimeout(() => {
-                if(toast.parentElement) toast.remove();
-            }, 3000);
+    function handleWordleKey(key) {
+      if (key === 'ENTER') {
+        if (currentGuess.length === 5) checkWordleGuess();
+      } else if (key === 'DEL') {
+        if (currentGuess.length > 0) {
+          currentGuess = currentGuess.slice(0, -1);
+          wordleCol--;
+          document.getElementById(`w-tile-${wordleRow}-${wordleCol}`).innerText = '';
         }
+      } else if (currentGuess.length < 5 && key.length === 1) {
+        document.getElementById(`w-tile-${wordleRow}-${wordleCol}`).innerText = key;
+        currentGuess += key;
+        wordleCol++;
+      }
+    }
 
-        function escapeHTML(str) {
-            return str.replace(/[&<>'"]/g, tag => ({
-                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-            }[tag] || tag));
+    function checkWordleGuess() {
+      for (let i = 0; i < 5; i++) {
+        const tile = document.getElementById(`w-tile-${wordleRow}-${i}`);
+        const char = currentGuess[i];
+        if (char === targetWordle[i]) {
+          tile.className += ' bg-emerald-500 border-emerald-400';
+        } else if (targetWordle.includes(char)) {
+          tile.className += ' bg-amber-500 border-amber-400';
+        } else {
+          tile.className += ' bg-slate-700 border-slate-600';
         }
+      }
 
-        function switchClass(classKey) {
-            if (!CLASS_CONFIGS[classKey]) return;
-            currentClassId = classKey;
-            localStorage.setItem('hype_active_class', classKey);
+      if (currentGuess === targetWordle) {
+        playSFX('cheer');
+      } else {
+        wordleRow++;
+        wordleCol = 0;
+        currentGuess = "";
+        if (wordleRow === 6) playSFX('buzzer');
+      }
+    }
 
-            const config = CLASS_CONFIGS[classKey];
+    function resetWordleGame() { initWordleBoard(); }
 
-            // Update CSS Root Variables
-            document.documentElement.style.setProperty('--primary-glow', config.primary);
-            document.documentElement.style.setProperty('--secondary-glow', config.secondary);
-            document.documentElement.style.setProperty('--accent-glow', config.accent);
-            document.body.style.backgroundColor = config.bgDark;
+    // WOULD YOU RATHER (25+ Scenarios)
+    const wyrPrompts = [
+      { cat: "superpowers", a: "Be able to fly, but only as fast as a walking speed", b: "Be invisible, but only when nobody is looking at you" },
+      { cat: "superpowers", a: "Have a magic carpet that flies anywhere", b: "Have an invisibility cloak that works anytime" },
+      { cat: "superpowers", a: "Be able to talk to all animals", b: "Be able to speak every human language fluently" },
+      { cat: "superpowers", a: "Have super strength for 10 minutes a day", b: "Be able to read minds for 1 minute a day" },
+      { cat: "superpowers", a: "Control fire with your hands", b: "Control water and ice with your hands" },
+      { cat: "superpowers", a: "Have elastic super-stretchy arms", b: "Have super speed like The Flash" },
 
-            // Update UI Header details
-            document.getElementById('classNameHeader').innerText = config.name;
-            document.getElementById('classIconDisplay').innerText = config.icon;
-            document.getElementById('classSubhead').innerText = config.subhead;
-            
-            const badge = document.getElementById('heroBadge');
-            badge.className = `px-5 py-1.5 rounded-full text-xs font-heading font-bold uppercase tracking-widest inline-block mb-3 shadow-lg ${config.badgeClass}`;
-            badge.innerText = config.heroBadge;
+      { cat: "adventure", a: "Explore the deepest trench in the ocean", b: "Be the first astronaut to land on Mars" },
+      { cat: "adventure", a: "Travel 500 years into the past", b: "Travel 500 years into the future" },
+      { cat: "adventure", a: "Live in a treehouse village in a rainforest", b: "Live in a futuristic underwater glass dome" },
+      { cat: "adventure", a: "Discover an ancient buried treasure chest", b: "Discover a secret friendly alien outpost" },
+      { cat: "adventure", a: "Be a famous pirate captain", b: "Be a knight guarding a medieval kingdom" },
 
-            document.getElementById('heroDescription').innerText = config.tagline;
-            document.getElementById('activeClassTag').innerText = `Active: ${config.name}`;
+      { cat: "school", a: "Have recess all day long but no summer break", b: "Have a 4-month summer break but 8-hour school days" },
+      { cat: "school", a: "Always speak in rhymes whenever you talk", b: "Always sing out loud instead of speaking normally" },
+      { cat: "school", a: "Have a homework robot that does your work", b: "Have a chef robot that makes your favorite lunch every day" },
+      { cat: "school", a: "Accidentally wear pajamas to school every Monday", b: "Accidentally wear a full superhero suit to school on Picture Day" },
+      { cat: "school", a: "Never have to take a quiz or test again", b: "Never have to do homework again" },
 
-            // Update tabs
-            document.querySelectorAll('.class-tab').forEach(tab => tab.classList.remove('active'));
-            const activeTab = document.getElementById(`tab-${classKey}`);
-            if (activeTab) activeTab.classList.add('active');
+      { cat: "animals", a: "Have a pet baby dinosaur the size of a puppy", b: "Have a pet miniature dragon that breathes tiny sparks" },
+      { cat: "animals", a: "Shrink to the size of an ant for 24 hours", b: "Grow to the size of a 3-story building for 24 hours" },
+      { cat: "animals", a: "Be able to breathe underwater like a fish", b: "Be able to night-vision see like an owl" },
+      { cat: "animals", a: "Ride a giant eagle into battle", b: "Ride an armored rhino into battle" },
 
-            // Reset background particle engine for new theme
-            initCanvasParticles();
+      { cat: "food", a: "Eat only pizza for every meal for a year", b: "Eat only tacos for every meal for a year" },
+      { cat: "food", a: "Have ice cream as hot as soup", b: "Have hot soup as cold as ice cream" },
+      { cat: "food", a: "Taste maple syrup every time you drink water", b: "Taste melted cheese every time you drink soda" },
+      { cat: "food", a: "Only be able to whisper for the rest of your life", b: "Only be able to shout for the rest of your life" }
+    ];
 
-            renderQuestions();
-            showToast(`Switched to ${config.name} Hub ${config.icon}`);
+    let wyrDeck = [];
+    let countA = 0, countB = 0;
+
+    function filterWYRCategory() {
+      const selectedCat = document.getElementById('wyr-category-select').value;
+      if (selectedCat === 'all') {
+        wyrDeck = [...wyrPrompts];
+      } else {
+        wyrDeck = wyrPrompts.filter(p => p.cat === selectedCat);
+      }
+      wyrDeck.sort(() => Math.random() - 0.5);
+      nextWYRPrompt();
+    }
+
+    function nextWYRPrompt() {
+      if (!wyrDeck || wyrDeck.length === 0) {
+        const selectedCat = document.getElementById('wyr-category-select')?.value || 'all';
+        wyrDeck = selectedCat === 'all' 
+          ? [...wyrPrompts] 
+          : wyrPrompts.filter(p => p.cat === selectedCat);
+        
+        if (wyrDeck.length === 0) wyrDeck = [...wyrPrompts];
+        wyrDeck.sort(() => Math.random() - 0.5);
+      }
+
+      const p = wyrDeck.pop();
+      document.getElementById('wyr-option-a').innerText = p.a;
+      document.getElementById('wyr-option-b').innerText = p.b;
+      countA = 0; 
+      countB = 0;
+      updateWYRStats();
+    }
+
+    function voteWYR(option) {
+      if (option === 'A') countA++;
+      if (option === 'B') countB++;
+      playSFX('chime');
+      updateWYRStats();
+    }
+
+    function updateWYRStats() {
+      const total = countA + countB;
+      const pctA = total === 0 ? 50 : Math.round((countA / total) * 100);
+      const pctB = total === 0 ? 50 : 100 - pctA;
+
+      document.getElementById('wyr-bar-a').style.width = `${pctA}%`;
+      document.getElementById('wyr-bar-b').style.width = `${pctB}%`;
+
+      document.getElementById('wyr-count-a').innerText = `${countA} Votes (${pctA}%)`;
+      document.getElementById('wyr-count-b').innerText = `${countB} Votes (${pctB}%)`;
+    }
+
+    // TRIVIA WHEEL (50+ Trivia Questions across 6 Categories)
+    const wheelCategories = [
+      { name: "Science", color: "#ec4899" },
+      { name: "History", color: "#8b5cf6" },
+      { name: "Language", color: "#3b82f6" },
+      { name: "Geography", color: "#10b981" },
+      { name: "Math & Puzzlers", color: "#f59e0b" },
+      { name: "Pop & Fun", color: "#06b6d4" }
+    ];
+
+    const triviaBank = {
+      "Science": [
+        { q: "What gas do plants absorb from the atmosphere for photosynthesis?", a: "Carbon Dioxide (CO2)" },
+        { q: "What is the hardest natural substance found on Earth?", a: "Diamond" },
+        { q: "Which planet in our solar system has the most moon moons?", a: "Saturn (with over 140 moons)" },
+        { q: "What is the powerhouse of the human cell?", a: "Mitochondria" },
+        { q: "At what temperature Celsius does pure water freeze?", a: "0 degrees Celsius (32°F)" }
+      ],
+      "History": [
+        { q: "In what year did the Apollo 11 mission land humans on the Moon?", a: "1969" },
+        { q: "Which ancient civilization built the Great Pyramid of Giza?", a: "Ancient Egyptians" },
+        { q: "Who was the first President of the United States?", a: "George Washington" },
+        { q: "What famous wall in Germany fell in 1989, reuniting the city of Berlin?", a: "The Berlin Wall" },
+        { q: "Which queen ruled Great Britain for 63 years during the 19th century industrial revolution?", a: "Queen Victoria" }
+      ],
+      "Language": [
+        { q: "What figure of speech compares two things using 'like' or 'as'?", a: "A Simile" },
+        { q: "What is the term for a word that reads the same backward and forward (e.g., RACECAR)?", a: "A Palindrome" },
+        { q: "Who wrote the famous plays 'Romeo and Juliet' and 'Macbeth'?", a: "William Shakespeare" },
+        { q: "What punctuation mark is used to show ownership or contraction?", a: "An Apostrophe" },
+        { q: "What do we call words that sound the same but have different meanings and spellings (e.g., hear / here)?", a: "Homophones" }
+      ],
+      "Geography": [
+        { q: "What is the longest river in the world?", a: "The Nile River (or Amazon River)" },
+        { q: "What is the capital city of Australia?", a: "Canberra" },
+        { q: "Which continent is home to the Amazon Rainforest?", a: "South America" },
+        { q: "What is the smallest country in the world by area?", a: "Vatican City" },
+        { q: "What mountain range contains Mount Everest, the highest peak on Earth?", a: "The Himalayas" }
+      ],
+      "Math & Puzzlers": [
+        { q: "What is the perimeter of a square with a side length of 7 cm?", a: "28 cm (7 x 4)" },
+        { q: "What is the value of Pi rounded to two decimal places?", a: "3.14" },
+        { q: "If a triangle has angles of 90° and 45°, what is the third angle?", a: "45 degrees (total is 180°)" },
+        { q: "What is 15 multiplied by 4?", a: "60" },
+        { q: "How many sides does a regular octagon have?", a: "8 sides" }
+      ],
+      "Pop & Fun": [
+        { q: "In video games, what kingdom is Mario usually trying to save?", a: "The Mushroom Kingdom" },
+        { q: "What color are Mickey Mouse's shorts?", a: "Red (with white buttons)" },
+        { q: "Which superhero is known as the 'Friendly Neighborhood' hero?", a: "Spider-Man" },
+        { q: "How many spots are on a standard single die?", a: "21 spots" },
+        { q: "In Disney's 'Frozen', what is the name of the friendly talking snowman?", a: "Olaf" }
+      ]
+    };
+
+    let currentWheelAngle = 0;
+    let isWheelSpinning = false;
+    let currentTriviaQA = null;
+
+    function drawWheel() {
+      const canvas = document.getElementById('wheel-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const radius = 150;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const sliceAngle = (2 * Math.PI) / wheelCategories.length;
+
+      wheelCategories.forEach((cat, index) => {
+        const startAngle = currentWheelAngle + (index * sliceAngle);
+        const endAngle = startAngle + sliceAngle;
+
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+        ctx.fillStyle = cat.color;
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#ffffff';
+        ctx.stroke();
+
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(startAngle + sliceAngle / 2);
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 13px Outfit, sans-serif";
+        ctx.fillText(cat.name, radius - 15, 5);
+        ctx.restore();
+      });
+    }
+
+    function spinTriviaWheel() {
+      if (isWheelSpinning) return;
+      isWheelSpinning = true;
+      playSFX('drumroll');
+
+      document.getElementById('wheel-answer-btn').classList.add('hidden');
+      document.getElementById('wheel-answer-box').classList.add('hidden');
+      document.getElementById('wheel-question-box').innerText = "Spinning...";
+
+      const totalRotation = Math.PI * 2 * (5 + Math.random() * 5);
+      const startAngle = currentWheelAngle;
+      const startTime = performance.now();
+      const duration = 3500;
+
+      function animateSpin(currentTime) {
+        const elapsed = currentTime - startTime;
+        if (elapsed < duration) {
+          const progress = elapsed / duration;
+          const easeOut = 1 - Math.pow(1 - progress, 3);
+          currentWheelAngle = startAngle + (totalRotation * easeOut);
+          drawWheel();
+          requestAnimationFrame(animateSpin);
+        } else {
+          currentWheelAngle = (startAngle + totalRotation) % (Math.PI * 2);
+          drawWheel();
+          isWheelSpinning = false;
+          determineWheelResult();
         }
+      }
+      requestAnimationFrame(animateSpin);
+    }
 
-        const qaForm = document.getElementById('qaForm');
-        const questionInput = document.getElementById('questionInput');
+    function determineWheelResult() {
+      const sliceAngle = (2 * Math.PI) / wheelCategories.length;
+      // Pointer is at 270 degrees (Top)
+      const pointerAngle = (3 * Math.PI / 2);
+      let normalized = (pointerAngle - currentWheelAngle) % (Math.PI * 2);
+      if (normalized < 0) normalized += Math.PI * 2;
 
-        qaForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const text = questionInput.value.trim();
+      const winningIndex = Math.floor(normalized / sliceAngle) % wheelCategories.length;
+      const category = wheelCategories[winningIndex].name;
 
-            if (text) {
-                const newQ = {
-                    id: Date.now(),
-                    text: text,
-                    votes: 1,
-                    discussed: false
-                };
+      document.getElementById('wheel-category-badge').innerText = `CATEGORY: ${category.toUpperCase()}`;
+      
+      const qList = triviaBank[category] || triviaBank["Science"];
+      currentTriviaQA = qList[Math.floor(Math.random() * qList.length)];
 
-                classQuestions[currentClassId].unshift(newQ);
-                saveAndRender();
-                questionInput.value = '';
+      document.getElementById('wheel-question-box').innerText = currentTriviaQA.q;
+      document.getElementById('wheel-answer-box').innerText = currentTriviaQA.a;
+      document.getElementById('wheel-answer-btn').classList.remove('hidden');
+      playSFX('cheer');
+    }
 
-                // Trigger confetti styled for current class
-                const config = CLASS_CONFIGS[currentClassId];
-                confetti({
-                    particleCount: 90,
-                    spread: 80,
-                    origin: { y: 0.8 },
-                    colors: [config.primary, config.secondary, config.accent]
-                });
-                
-                showToast("🔥 Question submitted anonymously!");
-            }
-        });
+    function toggleWheelAnswer() {
+      const ansBox = document.getElementById('wheel-answer-box');
+      if (ansBox) {
+        ansBox.classList.toggle('hidden');
+        playSFX('chime');
+      }
+    }
 
-        function setFilter(filter) {
-            currentFilter = filter;
-            const topBtn = document.getElementById('filterTop');
-            const newBtn = document.getElementById('filterNew');
-            
-            if(filter === 'top') {
-                topBtn.className = "tab-btn px-4 py-1.5 rounded-lg font-heading font-bold text-xs sm:text-sm text-white bg-white/20 transition";
-                newBtn.className = "tab-btn px-4 py-1.5 rounded-lg font-heading font-bold text-xs sm:text-sm text-white/60 hover:text-white transition";
-            } else {
-                newBtn.className = "tab-btn px-4 py-1.5 rounded-lg font-heading font-bold text-xs sm:text-sm text-white bg-white/20 transition";
-                topBtn.className = "tab-btn px-4 py-1.5 rounded-lg font-heading font-bold text-xs sm:text-sm text-white/60 hover:text-white transition";
-            }
-            renderQuestions();
-        }
-
-        function upvote(id, e) {
-            if(e) e.stopPropagation();
-            const list = classQuestions[currentClassId];
-            const q = list.find(item => item.id === id);
-            if (q) {
-                q.votes += 1;
-                saveAndRender();
-            }
-        }
-
-        function toggleDiscussed(id, e) {
-            if(e) e.stopPropagation();
-            const list = classQuestions[currentClassId];
-            const q = list.find(item => item.id === id);
-            if (q) {
-                q.discussed = !q.discussed;
-                saveAndRender();
-            }
-        }
-
-        function deleteQuestion(id, e) {
-            if(e) e.stopPropagation();
-            classQuestions[currentClassId] = classQuestions[currentClassId].filter(item => item.id !== id);
-            saveAndRender();
-            showToast("🗑️ Question removed from class feed");
-        }
-
-        function confirmReset() {
-            const btn = document.getElementById('resetBtn');
-            if(!resetConfirmState) {
-                resetConfirmState = true;
-                btn.innerText = "⚠️ Confirm Erase?";
-                btn.classList.add('bg-red-600', 'border-red-400');
-                
-                setTimeout(() => {
-                    resetConfirmState = false;
-                    btn.innerText = "🧹 Reset Class";
-                    btn.classList.remove('bg-red-600', 'border-red-400');
-                }, 3000);
-            } else {
-                classQuestions[currentClassId] = [];
-                saveAndRender();
-                showToast("🧹 Class hub reset successfully!");
-                resetConfirmState = false;
-                btn.innerText = "🧹 Reset Class";
-                btn.classList.remove('bg-red-600', 'border-red-400');
-            }
-        }
-
-        function renderQuestions() {
-            const feed = document.getElementById('questionsFeed');
-            const list = classQuestions[currentClassId] || [];
-            document.getElementById('questionCountBadge').innerText = list.length;
-            feed.innerHTML = '';
-
-            if (list.length === 0) {
-                feed.innerHTML = `
-                    <div class="glass-card text-center py-12 px-4 rounded-3xl opacity-60 text-lg font-heading">
-                        <p>No active questions for ${CLASS_CONFIGS[currentClassId].name} yet! Be the first to launch the discussion 🚀</p>
-                    </div>
-                `;
-                return;
-            }
-
-            let sorted = [...list];
-            if (currentFilter === 'top') {
-                sorted.sort((a, b) => b.votes - a.votes);
-            } else {
-                sorted.sort((a, b) => b.id - a.id);
-            }
-
-            sorted.forEach(q => {
-                const card = document.createElement('div');
-                card.className = `q-card glass-card rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${q.discussed ? 'discussed' : ''}`;
-                
-                card.innerHTML = `
-                    <div class="text-base sm:text-lg leading-relaxed flex-grow cursor-pointer pr-2" onclick="openSpotlight(${q.id})">
-                        ${escapeHTML(q.text)}
-                    </div>
-                    <div class="flex items-center gap-2 w-full sm:w-auto justify-end border-t sm:border-t-0 border-white/10 pt-3 sm:pt-0">
-                        <button class="bg-white/10 hover:bg-white/25 border border-white/20 text-white px-3.5 py-1.5 rounded-xl font-heading font-bold text-sm flex items-center gap-1.5 transition" onclick="upvote(${q.id}, event)" title="Upvote">
-                            🔥 <span>${q.votes}</span>
-                        </button>
-                        <button class="btn-gradient text-white px-4 py-1.5 rounded-xl font-heading font-bold text-sm transition" onclick="openSpotlight(${q.id})">
-                            🎤 Discuss
-                        </button>
-                        <button class="text-white/40 hover:text-white p-2 transition" onclick="toggleDiscussed(${q.id}, event)" title="Toggle Mark Discussed">
-                            ${q.discussed ? '↩️' : '✅'}
-                        </button>
-                        <button class="text-white/40 hover:text-red-400 p-2 transition" onclick="deleteQuestion(${q.id}, event)" title="Delete">
-                            🗑️
-                        </button>
-                    </div>
-                `;
-
-                feed.appendChild(card);
-            });
-        }
-
-        function saveAndRender() {
-            localStorage.setItem(`hype_qa_${currentClassId}`, JSON.stringify(classQuestions[currentClassId]));
-            renderQuestions();
-        }
-
-        function openSpotlight(id) {
-            const list = classQuestions[currentClassId];
-            const q = list.find(item => item.id === id);
-            if (!q) return;
-
-            activeSpotlightId = id;
-            document.getElementById('spotlightText').innerText = `"${q.text}"`;
-            document.getElementById('spotlightClassBadge').innerText = `${CLASS_CONFIGS[currentClassId].name} Spotlight`;
-            
-            const modal = document.getElementById('spotlightModal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            setTimerSeconds(120);
-        }
-
-        function closeSpotlight() {
-            const modal = document.getElementById('spotlightModal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-            pauseTimer();
-            activeSpotlightId = null;
-        }
-
-        function markSpotlightDiscussed() {
-            if (activeSpotlightId) {
-                toggleDiscussed(activeSpotlightId);
-                const config = CLASS_CONFIGS[currentClassId];
-                confetti({ particleCount: 80, spread: 100, origin: { y: 0.5 }, colors: [config.primary, config.secondary] });
-                closeSpotlight();
-            }
-        }
-
-        function pickRandomQuestion() {
-            const undiscussed = classQuestions[currentClassId].filter(q => !q.discussed);
-            if (undiscussed.length === 0) {
-                showToast("No active questions left to pick in this class!");
-                return;
-            }
-            const randomQ = undiscussed[Math.floor(Math.random() * undiscussed.length)];
-            openSpotlight(randomQ.id);
-        }
-
-        function updateTimerDisplay() {
-            const mins = Math.floor(timerSeconds / 60);
-            const secs = timerSeconds % 60;
-            document.getElementById('timerDisplay').innerText = 
-                `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        }
-
-        function setTimerSeconds(sec) {
-            pauseTimer();
-            timerSeconds = sec;
-            updateTimerDisplay();
-        }
-
-        function toggleTimer() {
-            if (isTimerRunning) pauseTimer();
-            else startTimer();
-        }
-
-        function startTimer() {
-            if (isTimerRunning) return;
-            isTimerRunning = true;
-            document.getElementById('timerToggleBtn').innerText = "⏸️ Pause";
-            timerInterval = setInterval(() => {
-                if (timerSeconds > 0) {
-                    timerSeconds--;
-                    updateTimerDisplay();
-                } else {
-                    pauseTimer();
-                    showToast("⏰ Time's up for this topic!");
-                }
-            }, 1000);
-        }
-
-        function pauseTimer() {
-            isTimerRunning = false;
-            clearInterval(timerInterval);
-            document.getElementById('timerToggleBtn').innerText = "▶️ Start";
-        }
-
-        function resetTimer() {
-            setTimerSeconds(120);
-        }
-
-        const canvas = document.getElementById('bgCanvas');
-        const ctx = canvas.getContext('2d');
-        let particles = [];
-        let animFrameId = null;
-
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-
-        function initCanvasParticles() {
-            particles = [];
-            const count = Math.min(Math.floor(window.innerWidth / 15), 70);
-
-            for (let i = 0; i < count; i++) {
-                particles.push({
-                    x: Math.random() * canvas.width,
-                    y: Math.random() * canvas.height,
-                    radius: Math.random() * 3 + 1,
-                    speedX: (Math.random() - 0.5) * 1.5,
-                    speedY: (Math.random() - 0.5) * 1.5,
-                    opacity: Math.random() * 0.7 + 0.3,
-                    pulse: Math.random() * 0.05 + 0.01,
-                    shape: currentClassId
-                });
-            }
-        }
-
-        function renderCanvasBackdrop() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const config = CLASS_CONFIGS[currentClassId];
-
-            particles.forEach(p => {
-                // Class-specific movement behavior
-                if (currentClassId === 'helldivers') {
-                    // Stratagem Beams / Falling rain
-                    p.y += Math.abs(p.speedY) + 1.5;
-                    if (p.y > canvas.height) p.y = 0;
-                    ctx.fillStyle = config.primary;
-                    ctx.fillRect(p.x, p.y, 2, p.radius * 6);
-                } else if (currentClassId === 'bald_furious') {
-                    // Racing Speed Lines / Flames
-                    p.x += Math.abs(p.speedX) + 3;
-                    if (p.x > canvas.width) p.x = 0;
-                    ctx.fillStyle = config.secondary;
-                    ctx.fillRect(p.x, p.y, p.radius * 8, 2);
-                } else if (currentClassId === 'mr_clean') {
-                    // Soapy Sparkling Bubbles
-                    p.y -= Math.abs(p.speedY) + 0.5;
-                    if (p.y < 0) p.y = canvas.height;
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, p.radius * 2.5, 0, Math.PI * 2);
-                    ctx.strokeStyle = config.primary;
-                    ctx.lineWidth = 1;
-                    ctx.stroke();
-                    // Shine dot inside bubble
-                    ctx.fillStyle = "#ffffff";
-                    ctx.fillRect(p.x - p.radius * 0.5, p.y - p.radius * 0.5, 2, 2);
-                } else if (currentClassId === 'sunny_seniors') {
-                    // Warm Sun Flare Particles
-                    p.y += (Math.random() - 0.5) * 0.8;
-                    p.x += (Math.random() - 0.5) * 0.8;
-                    p.opacity += Math.sin(Date.now() * 0.003) * 0.01;
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, p.radius * 3, 0, Math.PI * 2);
-                    ctx.fillStyle = config.secondary;
-                    ctx.globalAlpha = Math.max(0.1, Math.min(0.8, p.opacity));
-                    ctx.fill();
-                    ctx.globalAlpha = 1.0;
-                } else {
-                    // La Peace / Meme Floating Glow Sparks
-                    p.x += p.speedX;
-                    p.y += p.speedY;
-                    if (p.x < 0 || p.x > canvas.width) p.speedX *= -1;
-                    if (p.y < 0 || p.y > canvas.height) p.speedY *= -1;
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, p.radius * 2, 0, Math.PI * 2);
-                    ctx.fillStyle = (p.radius > 2.5) ? config.primary : config.secondary;
-                    ctx.fill();
-                }
-            });
-
-            animFrameId = requestAnimationFrame(renderCanvasBackdrop);
-        }
-
-        window.onload = function() {
-            switchClass(currentClassId);
-            renderCanvasBackdrop();
-        };
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeSpotlight();
-        });
-    </script>
+    // Default Window Onload Initialization
+    window.onload = function() {
+      generateScattergoriesTopics();
+      generateBoggleGrid();
+      nextTabooCard();
+      nextFiveSecPrompt();
+      nextWYRPrompt();
+    };
+  </script>
 </body>
 </html>
