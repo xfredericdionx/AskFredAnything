@@ -136,14 +136,17 @@
     <div class="w-full max-w-4xl flex flex-col gap-6">
         
         <div class="glass-card p-4 rounded-3xl flex flex-col gap-3">
-            <div class="flex justify-between items-center px-2">
+            <div class="flex flex-wrap justify-between items-center px-2 gap-2">
                 <span class="font-display text-sm sm:text-base text-[#ffee00] tracking-widest uppercase flex items-center gap-2">
                     <span class="inline-block animate-pulse">⚡</span> Select Your Class Hub:
                 </span>
-                <div class="flex items-center gap-2">
-                    <span id="syncStatusBadge" class="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span id="syncStatusBadge" class="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 cursor-pointer" onclick="changeRoomCodePrompt()" title="Click to change Room Code">
                         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> <span id="syncStatusText">Connecting Sync...</span>
                     </span>
+                    <button onclick="changeRoomCodePrompt()" class="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-white/10 hover:bg-white/20 text-white/90 border border-white/20 transition flex items-center gap-1">
+                        🔑 Room: <span id="roomCodeDisplay" class="text-[#ffee00]">HYPE-CLASS-1</span>
+                    </button>
                     <span id="activeClassTag" class="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-white/10 text-white/80 border border-white/20">
                         Switch Class Below
                     </span>
@@ -292,11 +295,7 @@
                 accent: "#ffe600",
                 badgeClass: "badge-helldivers",
                 bgDark: "#05070f",
-                seeds: [
-                    { id: 101, text: "Which orbital stratagem is best for solving tough physics problems?", votes: 24, discussed: false },
-                    { id: 102, text: "Are Automaton tanks just automated grading machines in disguise?", votes: 19, discussed: false },
-                    { id: 103, text: "If democracy is managed, who is managing our homework load?", votes: 31, discussed: false }
-                ]
+                seeds: []
             },
             la_peace: {
                 name: "La Peace",
@@ -309,11 +308,7 @@
                 accent: "#00f2fe",
                 badgeClass: "badge-la_peace",
                 bgDark: "#0a0514",
-                seeds: [
-                    { id: 201, text: "Can someone hit the 'La Peace' sign before we start this surprise test?", votes: 42, discussed: false },
-                    { id: 202, text: "Is getting 100% on the final exam considered unspoken Rizz?", votes: 35, discussed: false },
-                    { id: 203, text: "What's the official stream budget for AMP room upgrades?", votes: 18, discussed: false }
-                ]
+                seeds: []
             },
             mr_clean: {
                 name: "Mr Clean's Disciple",
@@ -326,11 +321,7 @@
                 accent: "#ffe600",
                 badgeClass: "badge-mr_clean",
                 bgDark: "#040e1a",
-                seeds: [
-                    { id: 301, text: "Does the glare off the teacher's head help reflect sunlight onto our notebooks?", votes: 58, discussed: false },
-                    { id: 302, text: "What brand of wax ensures maximum aerodynamic thought process?", votes: 44, discussed: false },
-                    { id: 303, text: "Is Mr. Clean technically the highest ranking academic authority?", votes: 29, discussed: false }
-                ]
+                seeds: []
             },
             sunny_seniors: {
                 name: "Sunny Seniors",
@@ -343,11 +334,7 @@
                 accent: "#ffee00",
                 badgeClass: "badge-sunny_seniors",
                 bgDark: "#120806",
-                seeds: [
-                    { id: 401, text: "What is the scientifically proven cure for Senioritis?", votes: 39, discussed: false },
-                    { id: 402, text: "Where are we holding the official sunrise celebration?", votes: 27, discussed: false },
-                    { id: 403, text: "If we sleep 8 hours a day, why are seniors still perpetually tired?", votes: 51, discussed: false }
-                ]
+                seeds: []
             },
             bald_furious: {
                 name: "Bald and Furious",
@@ -360,15 +347,12 @@
                 accent: "#00f2fe",
                 badgeClass: "badge-bald_furious",
                 bgDark: "#120307",
-                seeds: [
-                    { id: 501, text: "You don't need a full head of hair when you got FAMILY. True or false?", votes: 77, discussed: false },
-                    { id: 502, text: "Can we install a nitrous oxide boost button on the classroom podium?", votes: 34, discussed: false },
-                    { id: 503, text: "What's the top quarter-mile speed of finishing this pop quiz?", votes: 26, discussed: false }
-                ]
+                seeds: []
             }
         };
 
         let currentClassId = localStorage.getItem('hype_active_class') || 'helldivers';
+        let currentRoomCode = localStorage.getItem('hype_room_code') || 'HYPE-CLASS-1';
         let classQuestions = {};
         let allQuestions = [];
         let currentFilter = 'top';
@@ -377,44 +361,47 @@
         let timerSeconds = 120;
         let isTimerRunning = false;
         let resetConfirmState = false;
+        let unsubscribeListener = null;
 
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'hype-qa-app';
+        const defaultAppId = typeof __app_id !== 'undefined' ? __app_id : 'hype-qa-default';
         let db = null;
         let auth = null;
         let currentUser = null;
 
-        // Load saved questions from localStorage as backup persistence
         function loadLocalData() {
-            const saved = localStorage.getItem('hype_questions_storage_v2');
+            const saved = localStorage.getItem(`hype_questions_${currentRoomCode}`);
             if (saved) {
                 try {
                     classQuestions = JSON.parse(saved);
                     return;
                 } catch(e) { console.error("Error parsing local storage", e); }
             }
-            // Seed initial questions if no stored data exists yet
             Object.keys(CLASS_CONFIGS).forEach(classKey => {
-                classQuestions[classKey] = [...CLASS_CONFIGS[classKey].seeds];
+                if(!classQuestions[classKey]) classQuestions[classKey] = [];
             });
             saveLocalData();
         }
 
         function saveLocalData() {
             try {
-                localStorage.setItem('hype_questions_storage_v2', JSON.stringify(classQuestions));
+                localStorage.setItem(`hype_questions_${currentRoomCode}`, JSON.stringify(classQuestions));
             } catch(e) { console.error("Error saving to local storage", e); }
         }
 
         loadLocalData();
 
         async function initCloudSync() {
+            updateSyncBadge(false, "Connecting to Cloud...");
+            document.getElementById('roomCodeDisplay').innerText = currentRoomCode;
+
             try {
-                if (typeof __firebase_config !== 'undefined') {
+                if (typeof __firebase_config !== 'undefined' && __firebase_config) {
                     const firebaseConfig = JSON.parse(__firebase_config);
                     const app = initializeApp(firebaseConfig);
                     db = getFirestore(app);
                     auth = getAuth(app);
 
+                    // Ensure authentication finishes BEFORE attempting any Firestore query (Rule 3)
                     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                         const userCred = await signInWithCustomToken(auth, __initial_auth_token);
                         currentUser = userCred.user;
@@ -425,11 +412,11 @@
 
                     setupLiveListener();
                 } else {
-                    updateSyncBadge(false, "Saved to Local Browser");
+                    updateSyncBadge(false, `Local Mode (Room: ${currentRoomCode})`);
                 }
             } catch (err) {
-                console.warn("Cloud sync disabled or offline:", err);
-                updateSyncBadge(false, "Offline / Local Saved");
+                console.warn("Cloud sync initialization error:", err);
+                updateSyncBadge(false, `Offline / Local Mode`);
             }
         }
 
@@ -439,19 +426,244 @@
             if (!badge || !text) return;
 
             if (isLive) {
-                badge.className = "text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5";
-                text.innerText = labelText || "Live Chromebook Sync";
+                badge.className = "text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 cursor-pointer";
+                text.innerText = labelText || `Synced: ${currentRoomCode}`;
             } else {
-                badge.className = "text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1.5";
-                text.innerText = labelText || "Saved to Local Browser";
+                badge.className = "text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1.5 cursor-pointer";
+                text.innerText = labelText || `Local: ${currentRoomCode}`;
             }
         }
 
         function setupLiveListener() {
             if (!db || !currentUser) return;
 
-            const questionsCol = collection(db, 'artifacts', appId, 'public', 'data', 'questions');
+            if (unsubscribeListener) {
+                unsubscribeListener();
+            }
+
+            // Path adhering strictly to Rule 1 using Room Code to pair Chromebooks
+            const targetAppId = `${defaultAppId}-${currentRoomCode.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+            const questionsCol = collection(db, 'artifacts', targetAppId, 'public', 'data', 'questions');
             
+            unsubscribeListener = onSnapshot(questionsCol, (snapshot) => {
+                allQuestions = [];
+                snapshot.forEach((docSnap) => {
+                    allQuestions.push({
+                        firestoreId: docSnap.id,
+                        ...docSnap.data()
+                    });
+                });
+
+                // Clear and repopulate class questions from live Firestore database
+                Object.keys(CLASS_CONFIGS).forEach(classKey => {
+                    const matched = allQuestions.filter(q => q.classId === classKey);
+                    classQuestions[classKey] = matched;
+                });
+
+                saveLocalData();
+                renderQuestions();
+                updateSyncBadge(true, `🟢 Live Sync: ${currentRoomCode}`);
+            }, (error) => {
+                console.error("Firestore snapshot error:", error);
+                updateSyncBadge(false, `Sync Error - Retrying...`);
+            });
+        }
+
+        function changeRoomCodePrompt() {
+            const inputContainer = document.createElement('div');
+            inputContainer.className = 'fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4';
+            inputContainer.id = 'roomCodeModal';
+            inputContainer.innerHTML = `
+                <div class="glass-card p-6 rounded-3xl max-w-md w-full border-2 border-[var(--primary-glow)] flex flex-col gap-4">
+                    <h3 class="font-display text-xl text-white">🔑 Enter Class Sync Room Code</h3>
+                    <p class="text-sm text-white/70 font-heading">Ensure all student Chromebooks and your teacher screen use the EXACT same Room Code so questions sync live.</p>
+                    <input type="text" id="roomCodeInput" value="${currentRoomCode}" class="w-full bg-black/60 border border-white/20 rounded-xl p-3 text-white font-mono text-lg uppercase outline-none focus:border-[var(--primary-glow)]" placeholder="E.g. HYPE-CLASS-1">
+                    <div class="flex justify-end gap-2">
+                        <button onclick="document.getElementById('roomCodeModal').remove()" class="px-4 py-2 rounded-xl text-white/60 hover:text-white font-heading font-bold text-sm">Cancel</button>
+                        <button onclick="saveRoomCode()" class="btn-gradient px-5 py-2 rounded-xl text-white font-heading font-bold text-sm">Connect Room</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(inputContainer);
+        }
+
+        window.saveRoomCode = function() {
+            const input = document.getElementById('roomCodeInput');
+            if (input && input.value.trim()) {
+                currentRoomCode = input.value.trim().toUpperCase();
+                localStorage.setItem('hype_room_code', currentRoomCode);
+                const modal = document.getElementById('roomCodeModal');
+                if (modal) modal.remove();
+                
+                loadLocalData();
+                initCloudSync();
+                showToast(`Switched to Room Sync Code: ${currentRoomCode}`);
+            }
+        };
+
+        const qaForm = document.getElementById('qaForm');
+        const questionInput = document.getElementById('questionInput');
+
+        qaForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const text = questionInput.value.trim();
+
+            if (text) {
+                const newQ = {
+                    classId: currentClassId,
+                    text: text,
+                    votes: 1,
+                    discussed: false,
+                    createdAt: Date.now()
+                };
+
+                const targetAppId = `${defaultAppId}-${currentRoomCode.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+
+                if (db && currentUser) {
+                    try {
+                        const questionsCol = collection(db, 'artifacts', targetAppId, 'public', 'data', 'questions');
+                        await addDoc(questionsCol, newQ);
+                    } catch (err) {
+                        console.error("Cloud submission failed:", err);
+                        newQ.id = Date.now();
+                        if(!classQuestions[currentClassId]) classQuestions[currentClassId] = [];
+                        classQuestions[currentClassId].unshift(newQ);
+                        saveLocalData();
+                        renderQuestions();
+                    }
+                } else {
+                    newQ.id = Date.now();
+                    if(!classQuestions[currentClassId]) classQuestions[currentClassId] = [];
+                    classQuestions[currentClassId].unshift(newQ);
+                    saveLocalData();
+                    renderQuestions();
+                }
+
+                questionInput.value = '';
+
+                const config = CLASS_CONFIGS[currentClassId];
+                confetti({
+                    particleCount: 90,
+                    spread: 80,
+                    origin: { y: 0.8 },
+                    colors: [config.primary, config.secondary, config.accent]
+                });
+                
+                showToast("🔥 Question submitted anonymously!");
+            }
+        });
+
+        async function upvote(id, e) {
+            if(e) e.stopPropagation();
+            const list = classQuestions[currentClassId] || [];
+            const q = list.find(item => item.firestoreId === id || item.id === id || String(item.id) === String(id));
+            const targetAppId = `${defaultAppId}-${currentRoomCode.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+            
+            if (q) {
+                if (db && currentUser && q.firestoreId) {
+                    const docRef = doc(db, 'artifacts', targetAppId, 'public', 'data', 'questions', q.firestoreId);
+                    await updateDoc(docRef, { votes: (q.votes || 0) + 1 });
+                } else {
+                    q.votes = (q.votes || 0) + 1;
+                    saveLocalData();
+                    renderQuestions();
+                }
+            }
+        }
+
+        async function toggleDiscussed(id, e) {
+            if(e) e.stopPropagation();
+            const list = classQuestions[currentClassId] || [];
+            const q = list.find(item => item.firestoreId === id || item.id === id || String(item.id) === String(id));
+            const targetAppId = `${defaultAppId}-${currentRoomCode.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+            
+            if (q) {
+                if (db && currentUser && q.firestoreId) {
+                    const docRef = doc(db, 'artifacts', targetAppId, 'public', 'data', 'questions', q.firestoreId);
+                    await updateDoc(docRef, { discussed: !q.discussed });
+                } else {
+                    q.discussed = !q.discussed;
+                    saveLocalData();
+                    renderQuestions();
+                }
+            }
+        }
+
+        async function deleteQuestion(id, e) {
+            if(e) e.stopPropagation();
+            const list = classQuestions[currentClassId] || [];
+            const q = list.find(item => item.firestoreId === id || item.id === id || String(item.id) === String(id));
+            const targetAppId = `${defaultAppId}-${currentRoomCode.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+
+            if (q && db && currentUser && q.firestoreId) {
+                const docRef = doc(db, 'artifacts', targetAppId, 'public', 'data', 'questions', q.firestoreId);
+                await deleteDoc(docRef);
+            } else {
+                classQuestions[currentClassId] = classQuestions[currentClassId].filter(item => item.id !== id && item.firestoreId !== id);
+                saveLocalData();
+                renderQuestions();
+            }
+            showToast("🗑️ Question removed from class feed");
+        }
+
+        async function confirmReset() {
+            const btn = document.getElementById('resetBtn');
+            if(!resetConfirmState) {
+                resetConfirmState = true;
+                btn.innerText = "⚠️ Confirm Erase?";
+                btn.classList.add('bg-red-600', 'border-red-400');
+                
+                setTimeout(() => {
+                    resetConfirmState = false;
+                    btn.innerText = "🧹 Reset Class";
+                    btn.classList.remove('bg-red-600', 'border-red-400');
+                }, 3000);
+            } else {
+                const list = classQuestions[currentClassId] || [];
+                const targetAppId = `${defaultAppId}-${currentRoomCode.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+                if (db && currentUser) {
+                    for (const q of list) {
+                        if (q.firestoreId) {
+                            const docRef = doc(db, 'artifacts', targetAppId, 'public', 'data', 'questions', q.firestoreId);
+                            await deleteDoc(docRef);
+                        }
+                    }
+                }
+                classQuestions[currentClassId] = [];
+                saveLocalData();
+                renderQuestions();
+                showToast("🧹 Class hub reset successfully!");
+                resetConfirmState = false;
+                btn.innerText = "🧹 Reset Class";
+                btn.classList.remove('bg-red-600', 'border-red-400');
+            }
+        }
+
+        window.changeRoomCodePrompt = changeRoomCodePrompt;
+        window.switchClass = switchClass;
+        window.setFilter = setFilter;
+        window.upvote = upvote;
+        window.toggleDiscussed = toggleDiscussed;
+        window.deleteQuestion = deleteQuestion;
+        window.confirmReset = confirmReset;
+        window.openSpotlight = openSpotlight;
+        window.closeSpotlight = closeSpotlight;
+        window.markSpotlightDiscussed = markSpotlightDiscussed;
+        window.pickRandomQuestion = pickRandomQuestion;
+        window.setTimerSeconds = setTimerSeconds;
+        window.toggleTimer = toggleTimer;
+        window.resetTimer = resetTimer;
+
+        window.onload = function() {
+            switchClass(currentClassId);
+            renderCanvasBackdrop();
+            initCloudSync();
+        };
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeSpotlight();
+        });
+        
             onSnapshot(questionsCol, (snapshot) => {
                 allQuestions = [];
                 snapshot.forEach((docSnap) => {
