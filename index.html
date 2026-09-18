@@ -787,9 +787,236 @@
             });
         }
 
-        function openSpotlight(id) {
-        window.toggleTeacherModePrompt = toggleTeacherModePrompt;
+        function loadLocalData() {
+            try {
+                const data = localStorage.getItem('hype_class_questions');
+                if (data) classQuestions = JSON.parse(data);
+            } catch (e) { console.error("Error loading local data", e); }
+        }
 
+        function saveLocalData() {
+            localStorage.setItem('hype_class_questions', JSON.stringify(classQuestions));
+        }
+
+        function updateSyncBadge(isLive, text) {
+            const badge = document.getElementById('syncStatusBadge');
+            const textEl = document.getElementById('syncStatusText');
+            if(badge && textEl) {
+                textEl.innerText = text;
+                if(isLive) {
+                    badge.className = "text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 cursor-pointer";
+                    badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> <span id="syncStatusText">${text}</span>`;
+                } else {
+                    badge.className = "text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1.5 cursor-pointer";
+                    badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400"></span> <span id="syncStatusText">${text}</span>`;
+                }
+            }
+        }
+
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            if(!container) return;
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerText = message;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = 'slideIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) reverse forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function escapeHTML(str) {
+            if(!str) return '';
+            return str.replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                }[tag])
+            );
+        }
+
+        function changeRoomCodePrompt() {
+            const newCode = prompt("Enter new Room Code (e.g., HYPE-CLASS-2):", currentRoomCode);
+            if(newCode && newCode.trim() !== '') {
+                currentRoomCode = newCode.trim().toUpperCase();
+                localStorage.setItem('hype_room_code', currentRoomCode);
+                document.getElementById('roomCodeDisplay').innerText = currentRoomCode;
+                showToast(`🚪 Joined Room: ${currentRoomCode}`);
+                if(db) setupLiveListener();
+                else renderQuestions();
+            }
+        }
+
+        function pickRandomQuestion() {
+            const list = classQuestions[currentClassId] || [];
+            const unDiscussed = list.filter(q => !q.discussed);
+            if(unDiscussed.length === 0) {
+                showToast("No new questions to randomize!");
+                return;
+            }
+            const randomQ = unDiscussed[Math.floor(Math.random() * unDiscussed.length)];
+            openSpotlight(randomQ.firestoreId || randomQ.id);
+        }
+
+        function openSpotlight(id) {
+            const list = classQuestions[currentClassId] || [];
+            const q = list.find(item => item.firestoreId === id || item.id === id || String(item.id) === String(id));
+            if(!q) return;
+            
+            activeSpotlightId = q.firestoreId || q.id;
+            const modal = document.getElementById('spotlightModal');
+            const textEl = document.getElementById('spotlightText');
+            const classBadge = document.getElementById('spotlightClassBadge');
+            
+            textEl.innerText = `"${q.text}"`;
+            classBadge.innerText = CLASS_CONFIGS[currentClassId].name;
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            resetTimer();
+        }
+
+        function closeSpotlight() {
+            const modal = document.getElementById('spotlightModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            activeSpotlightId = null;
+            clearInterval(timerInterval);
+            isTimerRunning = false;
+        }
+
+        async function markSpotlightDiscussed() {
+            if(activeSpotlightId) {
+                await toggleDiscussed(activeSpotlightId);
+                showToast("✅ Marked as discussed!");
+            }
+            closeSpotlight();
+        }
+
+        function updateTimerDisplay() {
+            const display = document.getElementById('timerDisplay');
+            if(!display) return;
+            const m = Math.floor(timerSeconds / 60).toString().padStart(2, '0');
+            const s = (timerSeconds % 60).toString().padStart(2, '0');
+            display.innerText = `${m}:${s}`;
+            if(timerSeconds <= 30 && timerSeconds > 0) {
+                display.style.color = 'var(--secondary-glow)';
+                display.style.textShadow = '0 0 20px var(--secondary-glow)';
+            } else {
+                display.style.color = 'var(--primary-glow)';
+                display.style.textShadow = '0 0 20px var(--primary-glow)';
+            }
+        }
+
+        function setTimerSeconds(sec) {
+            timerSeconds = sec;
+            updateTimerDisplay();
+        }
+
+        function toggleTimer() {
+            const btn = document.getElementById('timerToggleBtn');
+            if(isTimerRunning) {
+                clearInterval(timerInterval);
+                isTimerRunning = false;
+                btn.innerText = "▶️ Start";
+            } else {
+                if(timerSeconds <= 0) return;
+                isTimerRunning = true;
+                btn.innerText = "⏸️ Pause";
+                timerInterval = setInterval(() => {
+                    if(timerSeconds > 0) {
+                        timerSeconds--;
+                        updateTimerDisplay();
+                    } else {
+                        clearInterval(timerInterval);
+                        isTimerRunning = false;
+                        btn.innerText = "▶️ Start";
+                        showToast("⏰ Time is up!");
+                    }
+                }, 1000);
+            }
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            isTimerRunning = false;
+            timerSeconds = 120; // Default 2 mins
+            const btn = document.getElementById('timerToggleBtn');
+            if(btn) btn.innerText = "▶️ Start";
+            updateTimerDisplay();
+        }
+
+        let canvas, ctx, particles = [];
+        function initCanvasParticles() {
+            canvas = document.getElementById('bgCanvas');
+            if(!canvas) return;
+            ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            particles = [];
+            for(let i=0; i<40; i++) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    vx: (Math.random() - 0.5) * 0.4,
+                    vy: (Math.random() - 0.5) * 0.4,
+                    size: Math.random() * 2 + 1,
+                    alpha: Math.random() * 0.4 + 0.1
+                });
+            }
+        }
+
+        function renderCanvasBackdrop() {
+            if(!canvas || !ctx) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const config = CLASS_CONFIGS[currentClassId];
+            ctx.fillStyle = config.primary;
+            
+            particles.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                if(p.x < 0) p.x = canvas.width;
+                if(p.x > canvas.width) p.x = 0;
+                if(p.y < 0) p.y = canvas.height;
+                if(p.y > canvas.height) p.y = 0;
+                
+                ctx.globalAlpha = p.alpha;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            requestAnimationFrame(renderCanvasBackdrop);
+        }
+
+        window.addEventListener('resize', () => {
+            if(canvas) {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+        });
+
+        // Map functions to window so HTML onClick attributes can call them from inside the module
+        window.switchClass = switchClass;
+        window.changeRoomCodePrompt = changeRoomCodePrompt;
+        window.toggleTeacherModePrompt = toggleTeacherModePrompt;
+        window.confirmReset = confirmReset;
+        window.pickRandomQuestion = pickRandomQuestion;
+        window.setFilter = setFilter;
+        window.upvote = upvote;
+        window.toggleDiscussed = toggleDiscussed;
+        window.deleteQuestion = deleteQuestion;
+        window.openSpotlight = openSpotlight;
+        window.closeSpotlight = closeSpotlight;
+        window.markSpotlightDiscussed = markSpotlightDiscussed;
+        window.setTimerSeconds = setTimerSeconds;
+        window.toggleTimer = toggleTimer;
+        window.resetTimer = resetTimer;
+
+        // Initialization
         window.onload = function() {
             switchClass(currentClassId);
             initCanvasParticles();
@@ -798,6 +1025,7 @@
             updateTeacherUI();
         };
 
+        // Escape Key Binding
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') closeSpotlight();
         });
