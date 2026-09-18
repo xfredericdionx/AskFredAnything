@@ -388,7 +388,7 @@
             container.appendChild(toast);
             setTimeout(() => {
                 toast.remove();
-            }, 3500);
+            }, 4000);
         }
 
         function escapeHTML(str) {
@@ -505,8 +505,16 @@
                         }
                     } catch (authErr) {
                         console.error("Firebase Auth Error:", authErr);
-                        updateSyncBadge(false, `⚠️ Local Mode (Auth Needed)`);
-                        showToast("⚠️ Firebase Auth: Enable Anonymous Sign-in in Console!");
+                        if (authErr.code === 'auth/unauthorized-domain') {
+                            updateSyncBadge(false, `⚠️ Add Domain in Firebase Settings`);
+                            showToast("⚠️ Firebase Auth: Add 'xfredericdionx.github.io' to Authorized Domains in Firebase Console!");
+                        } else if (authErr.code === 'auth/admin-restricted-operation') {
+                            updateSyncBadge(false, `⚠️ Enable Anonymous Sign-In`);
+                            showToast("⚠️ Enable Anonymous Sign-In under Firebase Authentication -> Sign-in Method!");
+                        } else {
+                            updateSyncBadge(false, `⚠️ Local Mode (${authErr.code || 'Auth Needed'})`);
+                            showToast(`⚠️ Auth Error: ${authErr.message || authErr.code}`);
+                        }
                         renderQuestions();
                         return;
                     }
@@ -555,8 +563,8 @@
             }, (error) => {
                 console.error("Firestore snapshot error:", error);
                 if (error.code === 'permission-denied') {
-                    updateSyncBadge(false, `⚠️ Local Mode (Rule Check)`);
-                    showToast("⚠️ Firebase Firestore Rules: Allow read/write in Console!");
+                    updateSyncBadge(false, `⚠️ Check Firestore Rules`);
+                    showToast("⚠️ Firestore Rules: Click Publish in Firestore -> Rules!");
                 } else {
                     updateSyncBadge(false, `Sync Error (${currentRoomCode})`);
                 }
