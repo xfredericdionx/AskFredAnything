@@ -270,7 +270,11 @@
     <!-- Notification Container -->
     <div id="toast-container"></div>
 
-    <script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
         const CLASS_CONFIGS = {
             helldivers: {
                 name: "Helldivers",
@@ -361,6 +365,7 @@
 
         let currentClassId = localStorage.getItem('hype_active_class') || 'helldivers';
         let classQuestions = {};
+        let allQuestions = [];
         let currentFilter = 'top';
         let activeSpotlightId = null;
         let timerInterval = null;
@@ -368,16 +373,71 @@
         let isTimerRunning = false;
         let resetConfirmState = false;
 
-        // Load questions for all classes from localStorage or set seed data
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'hype-qa-app';
+        let db = null;
+        let auth = null;
+        let currentUser = null;
+
+        // Initialize local questions fallback
         Object.keys(CLASS_CONFIGS).forEach(classKey => {
-            const saved = localStorage.getItem(`hype_qa_${classKey}`);
-            if (saved) {
-                classQuestions[classKey] = JSON.parse(saved);
-            } else {
-                classQuestions[classKey] = [...CLASS_CONFIGS[classKey].seeds];
-                localStorage.setItem(`hype_qa_${classKey}`, JSON.stringify(classQuestions[classKey]));
-            }
+            classQuestions[classKey] = [...CLASS_CONFIGS[classKey].seeds];
         });
+
+        async function initCloudSync() {
+            try {
+                if (typeof __firebase_config !== 'undefined') {
+                    const firebaseConfig = JSON.parse(__firebase_config);
+                    const app = initializeApp(firebaseConfig);
+                    db = getFirestore(app);
+                    auth = getAuth(app);
+
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        const userCred = await signInWithCustomToken(auth, __initial_auth_token);
+                        currentUser = userCred.user;
+                    } else {
+                        const userCred = await signInAnonymously(auth);
+                        currentUser = userCred.user;
+                    }
+
+                    setupLiveListener();
+                }
+            } catch (err) {
+                console.warn("Cloud sync disabled or offline:", err);
+            }
+        }
+
+        function setupLiveListener() {
+            if (!db || !currentUser) return;
+
+            const questionsCol = collection(db, 'artifacts', appId, 'public', 'data', 'questions');
+            
+            onSnapshot(questionsCol, (snapshot) => {
+                allQuestions = [];
+                snapshot.forEach((docSnap) => {
+                    allQuestions.push({
+                        firestoreId: docSnap.id,
+                        ...docSnap.data()
+                    });
+                });
+
+                // Populate class questions from real-time database
+                Object.keys(CLASS_CONFIGS).forEach(classKey => {
+                    const matched = allQuestions.filter(q => q.classId === classKey);
+                    if (matched.length > 0) {
+                        classQuestions[classKey] = matched;
+                    } else if (allQuestions.length === 0) {
+                        // Seed data fallback when collection is empty
+                        classQuestions[classKey] = [...CLASS_CONFIGS[classKey].seeds];
+                    } else {
+                        classQuestions[classKey] = [];
+                    }
+                });
+
+                renderQuestions();
+            }, (error) => {
+                console.error("Firestore snapshot error:", error);
+            });
+        }
 
         function showToast(message) {
             const container = document.getElementById('toast-container');
@@ -436,20 +496,32 @@
         const qaForm = document.getElementById('qaForm');
         const questionInput = document.getElementById('questionInput');
 
-        qaForm.addEventListener('submit', (e) => {
+        qaForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const text = questionInput.value.trim();
 
             if (text) {
                 const newQ = {
-                    id: Date.now(),
+                    classId: currentClassId,
                     text: text,
                     votes: 1,
-                    discussed: false
+                    discussed: false,
+                    createdAt: Date.now()
                 };
 
-                classQuestions[currentClassId].unshift(newQ);
-                saveAndRender();
+                if (db && currentUser) {
+                    try {
+                        const questionsCol = collection(db, 'artifacts', appId, 'public', 'data', 'questions');
+                        await addDoc(questionsCol, newQ);
+                    } catch (err) {
+                        console.error("Cloud submission failed:", err);
+                    }
+                } else {
+                    newQ.id = Date.now();
+                    classQuestions[currentClassId].unshift(newQ);
+                    renderQuestions();
+                }
+
                 questionInput.value = '';
 
                 // Trigger confetti styled for current class
@@ -480,34 +552,54 @@
             renderQuestions();
         }
 
-        function upvote(id, e) {
+        async function upvote(id, e) {
             if(e) e.stopPropagation();
             const list = classQuestions[currentClassId];
-            const q = list.find(item => item.id === id);
+            const q = list.find(item => item.firestoreId === id || item.id === id);
+            
             if (q) {
-                q.votes += 1;
-                saveAndRender();
+                if (db && currentUser && q.firestoreId) {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'questions', q.firestoreId);
+                    await updateDoc(docRef, { votes: (q.votes || 0) + 1 });
+                } else {
+                    q.votes += 1;
+                    renderQuestions();
+                }
             }
         }
 
-        function toggleDiscussed(id, e) {
+        async function toggleDiscussed(id, e) {
             if(e) e.stopPropagation();
             const list = classQuestions[currentClassId];
-            const q = list.find(item => item.id === id);
+            const q = list.find(item => item.firestoreId === id || item.id === id);
+            
             if (q) {
-                q.discussed = !q.discussed;
-                saveAndRender();
+                if (db && currentUser && q.firestoreId) {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'questions', q.firestoreId);
+                    await updateDoc(docRef, { discussed: !q.discussed });
+                } else {
+                    q.discussed = !q.discussed;
+                    renderQuestions();
+                }
             }
         }
 
-        function deleteQuestion(id, e) {
+        async function deleteQuestion(id, e) {
             if(e) e.stopPropagation();
-            classQuestions[currentClassId] = classQuestions[currentClassId].filter(item => item.id !== id);
-            saveAndRender();
+            const list = classQuestions[currentClassId];
+            const q = list.find(item => item.firestoreId === id || item.id === id);
+
+            if (q && db && currentUser && q.firestoreId) {
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'questions', q.firestoreId);
+                await deleteDoc(docRef);
+            } else {
+                classQuestions[currentClassId] = classQuestions[currentClassId].filter(item => item.id !== id);
+                renderQuestions();
+            }
             showToast("🗑️ Question removed from class feed");
         }
 
-        function confirmReset() {
+        async function confirmReset() {
             const btn = document.getElementById('resetBtn');
             if(!resetConfirmState) {
                 resetConfirmState = true;
@@ -520,8 +612,18 @@
                     btn.classList.remove('bg-red-600', 'border-red-400');
                 }, 3000);
             } else {
-                classQuestions[currentClassId] = [];
-                saveAndRender();
+                const list = classQuestions[currentClassId] || [];
+                if (db && currentUser) {
+                    for (const q of list) {
+                        if (q.firestoreId) {
+                            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'questions', q.firestoreId);
+                            await deleteDoc(docRef);
+                        }
+                    }
+                } else {
+                    classQuestions[currentClassId] = [];
+                    renderQuestions();
+                }
                 showToast("🧹 Class hub reset successfully!");
                 resetConfirmState = false;
                 btn.innerText = "🧹 Reset Class";
@@ -548,28 +650,29 @@
             if (currentFilter === 'top') {
                 sorted.sort((a, b) => b.votes - a.votes);
             } else {
-                sorted.sort((a, b) => b.id - a.id);
+                sorted.sort((a, b) => (b.createdAt || b.id || 0) - (a.createdAt || a.id || 0));
             }
 
             sorted.forEach(q => {
+                const qId = q.firestoreId || q.id;
                 const card = document.createElement('div');
                 card.className = `q-card glass-card rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${q.discussed ? 'discussed' : ''}`;
                 
                 card.innerHTML = `
-                    <div class="text-base sm:text-lg leading-relaxed flex-grow cursor-pointer pr-2" onclick="openSpotlight(${q.id})">
+                    <div class="text-base sm:text-lg leading-relaxed flex-grow cursor-pointer pr-2" onclick="openSpotlight('${qId}')">
                         ${escapeHTML(q.text)}
                     </div>
                     <div class="flex items-center gap-2 w-full sm:w-auto justify-end border-t sm:border-t-0 border-white/10 pt-3 sm:pt-0">
-                        <button class="bg-white/10 hover:bg-white/25 border border-white/20 text-white px-3.5 py-1.5 rounded-xl font-heading font-bold text-sm flex items-center gap-1.5 transition" onclick="upvote(${q.id}, event)" title="Upvote">
+                        <button class="bg-white/10 hover:bg-white/25 border border-white/20 text-white px-3.5 py-1.5 rounded-xl font-heading font-bold text-sm flex items-center gap-1.5 transition" onclick="upvote('${qId}', event)" title="Upvote">
                             🔥 <span>${q.votes}</span>
                         </button>
-                        <button class="btn-gradient text-white px-4 py-1.5 rounded-xl font-heading font-bold text-sm transition" onclick="openSpotlight(${q.id})">
+                        <button class="btn-gradient text-white px-4 py-1.5 rounded-xl font-heading font-bold text-sm transition" onclick="openSpotlight('${qId}')">
                             🎤 Discuss
                         </button>
-                        <button class="text-white/40 hover:text-white p-2 transition" onclick="toggleDiscussed(${q.id}, event)" title="Toggle Mark Discussed">
+                        <button class="text-white/40 hover:text-white p-2 transition" onclick="toggleDiscussed('${qId}', event)" title="Toggle Mark Discussed">
                             ${q.discussed ? '↩️' : '✅'}
                         </button>
-                        <button class="text-white/40 hover:text-red-400 p-2 transition" onclick="deleteQuestion(${q.id}, event)" title="Delete">
+                        <button class="text-white/40 hover:text-red-400 p-2 transition" onclick="deleteQuestion('${qId}', event)" title="Delete">
                             🗑️
                         </button>
                     </div>
@@ -579,17 +682,12 @@
             });
         }
 
-        function saveAndRender() {
-            localStorage.setItem(`hype_qa_${currentClassId}`, JSON.stringify(classQuestions[currentClassId]));
-            renderQuestions();
-        }
-
         function openSpotlight(id) {
             const list = classQuestions[currentClassId];
-            const q = list.find(item => item.id === id);
+            const q = list.find(item => item.firestoreId === id || item.id === id || String(item.id) === String(id));
             if (!q) return;
 
-            activeSpotlightId = id;
+            activeSpotlightId = q.firestoreId || q.id;
             document.getElementById('spotlightText').innerText = `"${q.text}"`;
             document.getElementById('spotlightClassBadge').innerText = `${CLASS_CONFIGS[currentClassId].name} Spotlight`;
             
@@ -623,7 +721,8 @@
                 return;
             }
             const randomQ = undiscussed[Math.floor(Math.random() * undiscussed.length)];
-            openSpotlight(randomQ.id);
+            const qId = randomQ.firestoreId || randomQ.id;
+            openSpotlight(qId);
         }
 
         function updateTimerDisplay() {
@@ -672,7 +771,6 @@
         const canvas = document.getElementById('bgCanvas');
         const ctx = canvas.getContext('2d');
         let particles = [];
-        let animFrameId = null;
 
         function resizeCanvas() {
             canvas.width = window.innerWidth;
@@ -704,21 +802,17 @@
             const config = CLASS_CONFIGS[currentClassId];
 
             particles.forEach(p => {
-                // Class-specific movement behavior
                 if (currentClassId === 'helldivers') {
-                    // Stratagem Beams / Falling rain
                     p.y += Math.abs(p.speedY) + 1.5;
                     if (p.y > canvas.height) p.y = 0;
                     ctx.fillStyle = config.primary;
                     ctx.fillRect(p.x, p.y, 2, p.radius * 6);
                 } else if (currentClassId === 'bald_furious') {
-                    // Racing Speed Lines / Flames
                     p.x += Math.abs(p.speedX) + 3;
                     if (p.x > canvas.width) p.x = 0;
                     ctx.fillStyle = config.secondary;
                     ctx.fillRect(p.x, p.y, p.radius * 8, 2);
                 } else if (currentClassId === 'mr_clean') {
-                    // Soapy Sparkling Bubbles
                     p.y -= Math.abs(p.speedY) + 0.5;
                     if (p.y < 0) p.y = canvas.height;
                     ctx.beginPath();
@@ -726,11 +820,9 @@
                     ctx.strokeStyle = config.primary;
                     ctx.lineWidth = 1;
                     ctx.stroke();
-                    // Shine dot inside bubble
                     ctx.fillStyle = "#ffffff";
                     ctx.fillRect(p.x - p.radius * 0.5, p.y - p.radius * 0.5, 2, 2);
                 } else if (currentClassId === 'sunny_seniors') {
-                    // Warm Sun Flare Particles
                     p.y += (Math.random() - 0.5) * 0.8;
                     p.x += (Math.random() - 0.5) * 0.8;
                     p.opacity += Math.sin(Date.now() * 0.003) * 0.01;
@@ -741,7 +833,6 @@
                     ctx.fill();
                     ctx.globalAlpha = 1.0;
                 } else {
-                    // La Peace / Meme Floating Glow Sparks
                     p.x += p.speedX;
                     p.y += p.speedY;
                     if (p.x < 0 || p.x > canvas.width) p.speedX *= -1;
@@ -753,12 +844,28 @@
                 }
             });
 
-            animFrameId = requestAnimationFrame(renderCanvasBackdrop);
+            requestAnimationFrame(renderCanvasBackdrop);
         }
+
+        // Attach global handler methods for inline HTML event attributes
+        window.switchClass = switchClass;
+        window.setFilter = setFilter;
+        window.upvote = upvote;
+        window.toggleDiscussed = toggleDiscussed;
+        window.deleteQuestion = deleteQuestion;
+        window.confirmReset = confirmReset;
+        window.openSpotlight = openSpotlight;
+        window.closeSpotlight = closeSpotlight;
+        window.markSpotlightDiscussed = markSpotlightDiscussed;
+        window.pickRandomQuestion = pickRandomQuestion;
+        window.setTimerSeconds = setTimerSeconds;
+        window.toggleTimer = toggleTimer;
+        window.resetTimer = resetTimer;
 
         window.onload = function() {
             switchClass(currentClassId);
             renderCanvasBackdrop();
+            initCloudSync();
         };
 
         document.addEventListener('keydown', (e) => {
