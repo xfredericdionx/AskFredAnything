@@ -140,9 +140,14 @@
                 <span class="font-display text-sm sm:text-base text-[#ffee00] tracking-widest uppercase flex items-center gap-2">
                     <span class="inline-block animate-pulse">⚡</span> Select Your Class Hub:
                 </span>
-                <span id="activeClassTag" class="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-white/10 text-white/80 border border-white/20">
-                    Switch Class Below
-                </span>
+                <div class="flex items-center gap-2">
+                    <span id="syncStatusBadge" class="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> <span id="syncStatusText">Connecting Sync...</span>
+                    </span>
+                    <span id="activeClassTag" class="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-white/10 text-white/80 border border-white/20">
+                        Switch Class Below
+                    </span>
+                </div>
             </div>
 
             <!-- Horizontal Scrollable Class Switcher Bar -->
@@ -378,10 +383,29 @@
         let auth = null;
         let currentUser = null;
 
-        // Initialize local questions fallback
-        Object.keys(CLASS_CONFIGS).forEach(classKey => {
-            classQuestions[classKey] = [...CLASS_CONFIGS[classKey].seeds];
-        });
+        // Load saved questions from localStorage as backup persistence
+        function loadLocalData() {
+            const saved = localStorage.getItem('hype_questions_storage_v2');
+            if (saved) {
+                try {
+                    classQuestions = JSON.parse(saved);
+                    return;
+                } catch(e) { console.error("Error parsing local storage", e); }
+            }
+            // Seed initial questions if no stored data exists yet
+            Object.keys(CLASS_CONFIGS).forEach(classKey => {
+                classQuestions[classKey] = [...CLASS_CONFIGS[classKey].seeds];
+            });
+            saveLocalData();
+        }
+
+        function saveLocalData() {
+            try {
+                localStorage.setItem('hype_questions_storage_v2', JSON.stringify(classQuestions));
+            } catch(e) { console.error("Error saving to local storage", e); }
+        }
+
+        loadLocalData();
 
         async function initCloudSync() {
             try {
@@ -400,9 +424,26 @@
                     }
 
                     setupLiveListener();
+                } else {
+                    updateSyncBadge(false, "Saved to Local Browser");
                 }
             } catch (err) {
                 console.warn("Cloud sync disabled or offline:", err);
+                updateSyncBadge(false, "Offline / Local Saved");
+            }
+        }
+
+        function updateSyncBadge(isLive, labelText) {
+            const badge = document.getElementById('syncStatusBadge');
+            const text = document.getElementById('syncStatusText');
+            if (!badge || !text) return;
+
+            if (isLive) {
+                badge.className = "text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5";
+                text.innerText = labelText || "Live Chromebook Sync";
+            } else {
+                badge.className = "text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1.5";
+                text.innerText = labelText || "Saved to Local Browser";
             }
         }
 
@@ -420,22 +461,18 @@
                     });
                 });
 
-                // Populate class questions from real-time database
+                // Clear and repopulate class questions from live Firestore database
                 Object.keys(CLASS_CONFIGS).forEach(classKey => {
                     const matched = allQuestions.filter(q => q.classId === classKey);
-                    if (matched.length > 0) {
-                        classQuestions[classKey] = matched;
-                    } else if (allQuestions.length === 0) {
-                        // Seed data fallback when collection is empty
-                        classQuestions[classKey] = [...CLASS_CONFIGS[classKey].seeds];
-                    } else {
-                        classQuestions[classKey] = [];
-                    }
+                    classQuestions[classKey] = matched;
                 });
 
+                saveLocalData();
                 renderQuestions();
+                updateSyncBadge(true, "Live Chromebook Sync");
             }, (error) => {
                 console.error("Firestore snapshot error:", error);
+                updateSyncBadge(false, "Sync Interrupted");
             });
         }
 
@@ -515,10 +552,15 @@
                         await addDoc(questionsCol, newQ);
                     } catch (err) {
                         console.error("Cloud submission failed:", err);
+                        newQ.id = Date.now();
+                        classQuestions[currentClassId].unshift(newQ);
+                        saveLocalData();
+                        renderQuestions();
                     }
                 } else {
                     newQ.id = Date.now();
                     classQuestions[currentClassId].unshift(newQ);
+                    saveLocalData();
                     renderQuestions();
                 }
 
@@ -554,15 +596,16 @@
 
         async function upvote(id, e) {
             if(e) e.stopPropagation();
-            const list = classQuestions[currentClassId];
-            const q = list.find(item => item.firestoreId === id || item.id === id);
+            const list = classQuestions[currentClassId] || [];
+            const q = list.find(item => item.firestoreId === id || item.id === id || String(item.id) === String(id));
             
             if (q) {
                 if (db && currentUser && q.firestoreId) {
                     const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'questions', q.firestoreId);
                     await updateDoc(docRef, { votes: (q.votes || 0) + 1 });
                 } else {
-                    q.votes += 1;
+                    q.votes = (q.votes || 0) + 1;
+                    saveLocalData();
                     renderQuestions();
                 }
             }
@@ -570,8 +613,8 @@
 
         async function toggleDiscussed(id, e) {
             if(e) e.stopPropagation();
-            const list = classQuestions[currentClassId];
-            const q = list.find(item => item.firestoreId === id || item.id === id);
+            const list = classQuestions[currentClassId] || [];
+            const q = list.find(item => item.firestoreId === id || item.id === id || String(item.id) === String(id));
             
             if (q) {
                 if (db && currentUser && q.firestoreId) {
@@ -579,6 +622,7 @@
                     await updateDoc(docRef, { discussed: !q.discussed });
                 } else {
                     q.discussed = !q.discussed;
+                    saveLocalData();
                     renderQuestions();
                 }
             }
@@ -586,14 +630,15 @@
 
         async function deleteQuestion(id, e) {
             if(e) e.stopPropagation();
-            const list = classQuestions[currentClassId];
-            const q = list.find(item => item.firestoreId === id || item.id === id);
+            const list = classQuestions[currentClassId] || [];
+            const q = list.find(item => item.firestoreId === id || item.id === id || String(item.id) === String(id));
 
             if (q && db && currentUser && q.firestoreId) {
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'questions', q.firestoreId);
                 await deleteDoc(docRef);
             } else {
-                classQuestions[currentClassId] = classQuestions[currentClassId].filter(item => item.id !== id);
+                classQuestions[currentClassId] = classQuestions[currentClassId].filter(item => item.id !== id && item.firestoreId !== id);
+                saveLocalData();
                 renderQuestions();
             }
             showToast("🗑️ Question removed from class feed");
@@ -620,10 +665,10 @@
                             await deleteDoc(docRef);
                         }
                     }
-                } else {
-                    classQuestions[currentClassId] = [];
-                    renderQuestions();
                 }
+                classQuestions[currentClassId] = [];
+                saveLocalData();
+                renderQuestions();
                 showToast("🧹 Class hub reset successfully!");
                 resetConfirmState = false;
                 btn.innerText = "🧹 Reset Class";
