@@ -441,16 +441,18 @@
                 unsubscribeListener();
             }
 
-            const targetAppId = `${defaultAppId}-${currentRoomCode.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
-            const questionsCol = collection(db, 'artifacts', targetAppId, 'public', 'data', 'questions');
+            const questionsCol = collection(db, 'artifacts', defaultAppId, 'public', 'data', 'questions');
             
             unsubscribeListener = onSnapshot(questionsCol, (snapshot) => {
                 allQuestions = [];
                 snapshot.forEach((docSnap) => {
-                    allQuestions.push({
-                        firestoreId: docSnap.id,
-                        ...docSnap.data()
-                    });
+                    const data = docSnap.data();
+                    if (data.roomCode === currentRoomCode) {
+                        allQuestions.push({
+                            firestoreId: docSnap.id,
+                            ...data
+                        });
+                    }
                 });
 
                 Object.keys(CLASS_CONFIGS).forEach(classKey => {
@@ -563,17 +565,16 @@
                 if (text) {
                     const newQ = {
                         classId: currentClassId,
+                        roomCode: currentRoomCode,
                         text: text,
                         votes: 1,
                         discussed: false,
                         createdAt: Date.now()
                     };
 
-                    const targetAppId = `${defaultAppId}-${currentRoomCode.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
-
                     if (db && currentUser) {
                         try {
-                            const questionsCol = collection(db, 'artifacts', targetAppId, 'public', 'data', 'questions');
+                            const questionsCol = collection(db, 'artifacts', defaultAppId, 'public', 'data', 'questions');
                             await addDoc(questionsCol, newQ);
                         } catch (err) {
                             console.error("Cloud submission failed, saving locally:", err);
@@ -625,11 +626,10 @@
             if(e) e.stopPropagation();
             const list = classQuestions[currentClassId] || [];
             const q = list.find(item => item.firestoreId === id || item.id === id || String(item.id) === String(id));
-            const targetAppId = `${defaultAppId}-${currentRoomCode.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
             
             if (q) {
                 if (db && currentUser && q.firestoreId) {
-                    const docRef = doc(db, 'artifacts', targetAppId, 'public', 'data', 'questions', q.firestoreId);
+                    const docRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'questions', q.firestoreId);
                     await updateDoc(docRef, { votes: (q.votes || 0) + 1 });
                 } else {
                     q.votes = (q.votes || 0) + 1;
@@ -643,11 +643,10 @@
             if(e) e.stopPropagation();
             const list = classQuestions[currentClassId] || [];
             const q = list.find(item => item.firestoreId === id || item.id === id || String(item.id) === String(id));
-            const targetAppId = `${defaultAppId}-${currentRoomCode.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
             
             if (q) {
                 if (db && currentUser && q.firestoreId) {
-                    const docRef = doc(db, 'artifacts', targetAppId, 'public', 'data', 'questions', q.firestoreId);
+                    const docRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'questions', q.firestoreId);
                     await updateDoc(docRef, { discussed: !q.discussed });
                 } else {
                     q.discussed = !q.discussed;
@@ -661,10 +660,9 @@
             if(e) e.stopPropagation();
             const list = classQuestions[currentClassId] || [];
             const q = list.find(item => item.firestoreId === id || item.id === id || String(item.id) === String(id));
-            const targetAppId = `${defaultAppId}-${currentRoomCode.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
 
             if (q && db && currentUser && q.firestoreId) {
-                const docRef = doc(db, 'artifacts', targetAppId, 'public', 'data', 'questions', q.firestoreId);
+                const docRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'questions', q.firestoreId);
                 await deleteDoc(docRef);
             } else {
                 classQuestions[currentClassId] = (classQuestions[currentClassId] || []).filter(item => item.id !== id && item.firestoreId !== id);
@@ -688,11 +686,11 @@
                 }, 3000);
             } else {
                 const list = classQuestions[currentClassId] || [];
-                const targetAppId = `${defaultAppId}-${currentRoomCode.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+                
                 if (db && currentUser) {
                     for (const q of list) {
                         if (q.firestoreId) {
-                            const docRef = doc(db, 'artifacts', targetAppId, 'public', 'data', 'questions', q.firestoreId);
+                            const docRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'questions', q.firestoreId);
                             await deleteDoc(docRef);
                         }
                     }
