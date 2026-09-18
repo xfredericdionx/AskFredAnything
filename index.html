@@ -286,7 +286,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // 🔑 FIREBASE CONFIGURATION
@@ -377,7 +377,6 @@
 
         let db = null;
         let auth = null;
-        let currentUser = null;
 
         function showToast(message) {
             const container = document.getElementById('toast-container');
@@ -434,7 +433,7 @@
                 const roomDisp = document.getElementById('roomCodeDisplay');
                 if (roomDisp) roomDisp.innerText = currentRoomCode;
                 showToast(`🔑 Switched Room Code to: ${currentRoomCode}`);
-                if (db && currentUser) {
+                if (db) {
                     setupLiveListener();
                 } else {
                     renderQuestions();
@@ -490,35 +489,19 @@
             if (roomDisp) roomDisp.innerText = currentRoomCode;
 
             try {
-                if (userFirebaseConfig && userFirebaseConfig.apiKey !== "YOUR_API_KEY") {
+                if (userFirebaseConfig && userFirebaseConfig.projectId) {
                     const app = initializeApp(userFirebaseConfig);
                     db = getFirestore(app);
                     auth = getAuth(app);
 
+                    // Try optional anonymous sign-in in the background (non-blocking)
                     try {
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            const userCred = await signInWithCustomToken(auth, __initial_auth_token);
-                            currentUser = userCred.user;
-                        } else {
-                            const userCred = await signInAnonymously(auth);
-                            currentUser = userCred.user;
-                        }
+                        await signInAnonymously(auth);
                     } catch (authErr) {
-                        console.error("Firebase Auth Error:", authErr);
-                        if (authErr.code === 'auth/unauthorized-domain') {
-                            updateSyncBadge(false, `⚠️ Add Domain in Firebase Settings`);
-                            showToast("⚠️ Firebase Auth: Add 'xfredericdionx.github.io' to Authorized Domains in Firebase Console!");
-                        } else if (authErr.code === 'auth/admin-restricted-operation') {
-                            updateSyncBadge(false, `⚠️ Enable Anonymous Sign-In`);
-                            showToast("⚠️ Enable Anonymous Sign-In under Firebase Authentication -> Sign-in Method!");
-                        } else {
-                            updateSyncBadge(false, `⚠️ Local Mode (${authErr.code || 'Auth Needed'})`);
-                            showToast(`⚠️ Auth Error: ${authErr.message || authErr.code}`);
-                        }
-                        renderQuestions();
-                        return;
+                        console.warn("Auth note (using direct Firestore test rules):", authErr.message);
                     }
 
+                    // Connect directly to live Firestore database listener
                     setupLiveListener();
                 } else {
                     updateSyncBadge(false, `Local Mode (${currentRoomCode})`);
@@ -532,7 +515,7 @@
         }
 
         function setupLiveListener() {
-            if (!db || !currentUser) return;
+            if (!db) return;
 
             if (unsubscribeListener) {
                 unsubscribeListener();
@@ -590,7 +573,7 @@
                         createdAt: Date.now()
                     };
 
-                    if (db && currentUser) {
+                    if (db) {
                         try {
                             const questionsCol = collection(db, 'questions');
                             await addDoc(questionsCol, newQ);
@@ -647,7 +630,7 @@
             const q = list.find(item => item.firestoreId === id || item.id === id || String(item.id) === String(id));
             
             if (q) {
-                if (db && currentUser && q.firestoreId) {
+                if (db && q.firestoreId) {
                     const docRef = doc(db, 'questions', q.firestoreId);
                     await updateDoc(docRef, { votes: (q.votes || 0) + 1 });
                 } else {
@@ -664,7 +647,7 @@
             const q = list.find(item => item.firestoreId === id || item.id === id || String(item.id) === String(id));
             
             if (q) {
-                if (db && currentUser && q.firestoreId) {
+                if (db && q.firestoreId) {
                     const docRef = doc(db, 'questions', q.firestoreId);
                     await updateDoc(docRef, { discussed: !q.discussed });
                 } else {
@@ -680,7 +663,7 @@
             const list = classQuestions[currentClassId] || [];
             const q = list.find(item => item.firestoreId === id || item.id === id || String(item.id) === String(id));
 
-            if (q && db && currentUser && q.firestoreId) {
+            if (q && db && q.firestoreId) {
                 const docRef = doc(db, 'questions', q.firestoreId);
                 await deleteDoc(docRef);
             } else {
@@ -706,7 +689,7 @@
             } else {
                 const list = classQuestions[currentClassId] || [];
                 
-                if (db && currentUser) {
+                if (db) {
                     for (const q of list) {
                         if (q.firestoreId) {
                             const docRef = doc(db, 'questions', q.firestoreId);
