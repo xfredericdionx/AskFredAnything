@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HYPE Q&A 🚀 | Multi-Class Room Hubs</title>
     
+    <!-- Tailwind CSS & Fonts -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -141,14 +142,14 @@
                     <span class="inline-block animate-pulse">⚡</span> Select Your Class Hub:
                 </span>
                 <div class="flex items-center gap-2 flex-wrap">
-                    <span id="syncStatusBadge" class="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 cursor-pointer" onclick="changeRoomCodePrompt()" title="Click to change Room Code">
-                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> <span id="syncStatusText">Connecting Sync...</span>
+                    <span id="syncStatusBadge" class="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1.5 cursor-pointer" onclick="changeRoomCodePrompt()" title="Click to change Room Code">
+                        <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> <span id="syncStatusText">Connecting Sync...</span>
                     </span>
                     <button onclick="changeRoomCodePrompt()" class="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-white/10 hover:bg-white/20 text-white/90 border border-white/20 transition flex items-center gap-1">
                         🔑 Room: <span id="roomCodeDisplay" class="text-[#ffee00]">HYPE-CLASS-1</span>
                     </button>
                     <span id="activeClassTag" class="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-white/10 text-white/80 border border-white/20">
-                        Switch Class Below
+                        Helldivers
                     </span>
                 </div>
             </div>
@@ -288,7 +289,7 @@
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // 🔑 FIREBASE CONFIGURATION:
+        // 🔑 FIREBASE CONFIGURATION
         const userFirebaseConfig = {
             apiKey: "AIzaSyB9IHKBEU078vHtOLgrxVIHiV144U9h2o0",
             authDomain: "ask-fred-anything.firebaseapp.com",
@@ -374,26 +375,123 @@
         let resetConfirmState = false;
         let unsubscribeListener = null;
 
-        const defaultAppId = typeof __app_id !== 'undefined' ? __app_id : 'hype-qa-default';
         let db = null;
         let auth = null;
         let currentUser = null;
 
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerText = message;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.remove();
+            }, 3500);
+        }
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+
+        function updateSyncBadge(isLive, text) {
+            const badge = document.getElementById('syncStatusBadge');
+            const label = document.getElementById('syncStatusText');
+            if (!badge || !label) return;
+
+            label.innerText = text;
+            if (isLive) {
+                badge.className = "text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 cursor-pointer";
+            } else {
+                badge.className = "text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1.5 cursor-pointer";
+            }
+        }
+
+        function saveLocalData() {
+            localStorage.setItem('hype_class_questions', JSON.stringify(classQuestions));
+        }
+
+        function loadLocalData() {
+            try {
+                const saved = localStorage.getItem('hype_class_questions');
+                if (saved) {
+                    classQuestions = JSON.parse(saved);
+                }
+            } catch(e) {
+                classQuestions = {};
+            }
+        }
+
+        function changeRoomCodePrompt() {
+            const newCode = prompt("Enter a Shared Room Code for your class (e.g., HYPE-CLASS-1, MATH-PERIOD-2):", currentRoomCode);
+            if (newCode && newCode.trim()) {
+                currentRoomCode = newCode.trim().toUpperCase();
+                localStorage.setItem('hype_room_code', currentRoomCode);
+                const roomDisp = document.getElementById('roomCodeDisplay');
+                if (roomDisp) roomDisp.innerText = currentRoomCode;
+                showToast(`🔑 Switched Room Code to: ${currentRoomCode}`);
+                if (db && currentUser) {
+                    setupLiveListener();
+                } else {
+                    renderQuestions();
+                }
+            }
+        }
+
+        function switchClass(classId) {
+            if (!CLASS_CONFIGS[classId]) return;
+            currentClassId = classId;
+            localStorage.setItem('hype_active_class', classId);
+
+            const config = CLASS_CONFIGS[classId];
+
+            // Tab Styling
+            Object.keys(CLASS_CONFIGS).forEach(key => {
+                const tab = document.getElementById(`tab-${key}`);
+                if (tab) {
+                    if (key === classId) {
+                        tab.classList.add('active');
+                    } else {
+                        tab.classList.remove('active');
+                    }
+                }
+            });
+
+            // Update Header & Hero Elements
+            document.getElementById('classNameHeader').innerText = config.name;
+            document.getElementById('classIconDisplay').innerText = config.icon;
+            document.getElementById('classSubhead').innerText = config.subhead;
+            document.getElementById('activeClassTag').innerText = config.name;
+
+            const badgeEl = document.getElementById('heroBadge');
+            badgeEl.className = `px-5 py-1.5 rounded-full text-xs font-heading font-bold uppercase tracking-widest inline-block mb-3 shadow-lg ${config.badgeClass}`;
+            badgeEl.innerText = config.heroBadge;
+
+            document.getElementById('heroDescription').innerText = config.tagline;
+            document.getElementById('inputLabel').innerText = `Got a question or hot take for ${config.name}?`;
+            document.getElementById('submitBtn').innerText = `Submit to ${config.name} Feed 🚀`;
+
+            document.documentElement.style.setProperty('--primary-glow', config.primary);
+            document.documentElement.style.setProperty('--secondary-glow', config.secondary);
+            document.documentElement.style.setProperty('--accent-glow', config.accent);
+            document.body.style.backgroundColor = config.bgDark;
+
+            renderQuestions();
+        }
+
         async function initCloudSync() {
+            loadLocalData();
             updateSyncBadge(false, "Connecting to Cloud...");
             const roomDisp = document.getElementById('roomCodeDisplay');
             if (roomDisp) roomDisp.innerText = currentRoomCode;
 
             try {
-                let configToUse = null;
                 if (userFirebaseConfig && userFirebaseConfig.apiKey !== "YOUR_API_KEY") {
-                    configToUse = userFirebaseConfig;
-                } else if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-                    configToUse = JSON.parse(__firebase_config);
-                }
-
-                if (configToUse) {
-                    const app = initializeApp(configToUse);
+                    const app = initializeApp(userFirebaseConfig);
                     db = getFirestore(app);
                     auth = getAuth(app);
 
@@ -407,18 +505,21 @@
                         }
                     } catch (authErr) {
                         console.error("Firebase Auth Error:", authErr);
-                        updateSyncBadge(false, `❌ Enable Anonymous Auth`);
-                        showToast("⚠️ Firebase Auth Error: Enable Anonymous Sign-in!");
+                        updateSyncBadge(false, `⚠️ Local Mode (Auth Needed)`);
+                        showToast("⚠️ Firebase Auth: Enable Anonymous Sign-in in Console!");
+                        renderQuestions();
                         return;
                     }
 
                     setupLiveListener();
                 } else {
-                    updateSyncBadge(false, `Paste Firebase Keys to Sync (${currentRoomCode})`);
+                    updateSyncBadge(false, `Local Mode (${currentRoomCode})`);
+                    renderQuestions();
                 }
             } catch (err) {
                 console.warn("Cloud sync initialization notice:", err);
                 updateSyncBadge(false, `Local Mode (${currentRoomCode})`);
+                renderQuestions();
             }
         }
 
@@ -429,7 +530,6 @@
                 unsubscribeListener();
             }
 
-            // Direct questions collection path
             const questionsCol = collection(db, 'questions');
             
             unsubscribeListener = onSnapshot(questionsCol, (snapshot) => {
@@ -455,13 +555,17 @@
             }, (error) => {
                 console.error("Firestore snapshot error:", error);
                 if (error.code === 'permission-denied') {
-                    updateSyncBadge(false, `❌ Set Firestore Rules`);
-                    showToast("⚠️ Firebase Permission Denied: Update Security Rules!");
+                    updateSyncBadge(false, `⚠️ Local Mode (Rule Check)`);
+                    showToast("⚠️ Firebase Firestore Rules: Allow read/write in Console!");
                 } else {
                     updateSyncBadge(false, `Sync Error (${currentRoomCode})`);
                 }
+                renderQuestions();
             });
         }
+
+        const qaForm = document.getElementById('qaForm');
+        const questionInput = document.getElementById('questionInput');
 
         if (qaForm) {
             qaForm.addEventListener('submit', async (e) => {
@@ -614,6 +718,7 @@
 
         function renderQuestions() {
             const feed = document.getElementById('questionsFeed');
+            if (!feed) return;
             const list = classQuestions[currentClassId] || [];
             document.getElementById('questionCountBadge').innerText = list.length;
             feed.innerHTML = '';
@@ -629,7 +734,7 @@
 
             let sorted = [...list];
             if (currentFilter === 'top') {
-                sorted.sort((a, b) => b.votes - a.votes);
+                sorted.sort((a, b) => (b.votes || 0) - (a.votes || 0));
             } else {
                 sorted.sort((a, b) => (b.createdAt || b.id || 0) - (a.createdAt || a.id || 0));
             }
@@ -750,10 +855,11 @@
         }
 
         const canvas = document.getElementById('bgCanvas');
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas ? canvas.getContext('2d') : null;
         let particles = [];
 
         function resizeCanvas() {
+            if (!canvas) return;
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
         }
@@ -761,6 +867,7 @@
         resizeCanvas();
 
         function initCanvasParticles() {
+            if (!canvas) return;
             particles = [];
             const count = Math.min(Math.floor(window.innerWidth / 15), 70);
 
@@ -778,8 +885,11 @@
         }
 
         function renderCanvasBackdrop() {
+            if (!ctx || !canvas) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const config = CLASS_CONFIGS[currentClassId];
+            const config = CLASS_CONFIGS[currentClassId] || CLASS_CONFIGS.helldivers;
+
+            if (particles.length === 0) initCanvasParticles();
 
             particles.forEach(p => {
                 if (currentClassId === 'helldivers') {
@@ -841,10 +951,10 @@
         window.toggleTimer = toggleTimer;
         window.resetTimer = resetTimer;
         window.changeRoomCodePrompt = changeRoomCodePrompt;
-        window.saveRoomCode = saveRoomCode;
 
         window.onload = function() {
             switchClass(currentClassId);
+            initCanvasParticles();
             renderCanvasBackdrop();
             initCloudSync();
         };
