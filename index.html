@@ -288,7 +288,7 @@
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // 🔑 FIREBASE CONFIGURATION (AUTOMATICALLY INSTALLED):
+        // 🔑 FIREBASE CONFIGURATION:
         const userFirebaseConfig = {
             apiKey: "AIzaSyB9IHKBEU078vHtOLgrxVIHiV144U9h2o0",
             authDomain: "ask-fred-anything.firebaseapp.com",
@@ -379,35 +379,12 @@
         let auth = null;
         let currentUser = null;
 
-        function loadLocalData() {
-            const saved = localStorage.getItem(`hype_questions_${currentRoomCode}`);
-            if (saved) {
-                try {
-                    classQuestions = JSON.parse(saved);
-                    return;
-                } catch(e) { console.error("Error parsing local storage", e); }
-            }
-            Object.keys(CLASS_CONFIGS).forEach(classKey => {
-                if(!classQuestions[classKey]) classQuestions[classKey] = [];
-            });
-            saveLocalData();
-        }
-
-        function saveLocalData() {
-            try {
-                localStorage.setItem(`hype_questions_${currentRoomCode}`, JSON.stringify(classQuestions));
-            } catch(e) { console.error("Error saving to local storage", e); }
-        }
-
-        loadLocalData();
-
         async function initCloudSync() {
             updateSyncBadge(false, "Connecting to Cloud...");
             const roomDisp = document.getElementById('roomCodeDisplay');
             if (roomDisp) roomDisp.innerText = currentRoomCode;
 
             try {
-                // Check if user has pasted valid Firebase keys or environment provides them
                 let configToUse = null;
                 if (userFirebaseConfig && userFirebaseConfig.apiKey !== "YOUR_API_KEY") {
                     configToUse = userFirebaseConfig;
@@ -420,12 +397,19 @@
                     db = getFirestore(app);
                     auth = getAuth(app);
 
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        const userCred = await signInWithCustomToken(auth, __initial_auth_token);
-                        currentUser = userCred.user;
-                    } else {
-                        const userCred = await signInAnonymously(auth);
-                        currentUser = userCred.user;
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            const userCred = await signInWithCustomToken(auth, __initial_auth_token);
+                            currentUser = userCred.user;
+                        } else {
+                            const userCred = await signInAnonymously(auth);
+                            currentUser = userCred.user;
+                        }
+                    } catch (authErr) {
+                        console.error("Firebase Auth Error:", authErr);
+                        updateSyncBadge(false, `❌ Enable Anonymous Auth`);
+                        showToast("⚠️ Firebase Auth Error: Enable Anonymous Sign-in!");
+                        return;
                     }
 
                     setupLiveListener();
@@ -438,20 +422,6 @@
             }
         }
 
-        function updateSyncBadge(isLive, labelText) {
-            const badge = document.getElementById('syncStatusBadge');
-            const text = document.getElementById('syncStatusText');
-            if (!badge || !text) return;
-
-            if (isLive) {
-                badge.className = "text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 cursor-pointer";
-                text.innerText = labelText || `Synced: ${currentRoomCode}`;
-            } else {
-                badge.className = "text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1.5 cursor-pointer";
-                text.innerText = labelText || `Local: ${currentRoomCode}`;
-            }
-        }
-
         function setupLiveListener() {
             if (!db || !currentUser) return;
 
@@ -459,7 +429,8 @@
                 unsubscribeListener();
             }
 
-            const questionsCol = collection(db, 'artifacts', defaultAppId, 'public', 'data', 'questions');
+            // Direct questions collection path
+            const questionsCol = collection(db, 'questions');
             
             unsubscribeListener = onSnapshot(questionsCol, (snapshot) => {
                 allQuestions = [];
@@ -483,97 +454,14 @@
                 updateSyncBadge(true, `🟢 Live Sync: ${currentRoomCode}`);
             }, (error) => {
                 console.error("Firestore snapshot error:", error);
-                updateSyncBadge(false, `Sync Error (${currentRoomCode})`);
+                if (error.code === 'permission-denied') {
+                    updateSyncBadge(false, `❌ Set Firestore Rules`);
+                    showToast("⚠️ Firebase Permission Denied: Update Security Rules!");
+                } else {
+                    updateSyncBadge(false, `Sync Error (${currentRoomCode})`);
+                }
             });
         }
-
-        function changeRoomCodePrompt() {
-            const existing = document.getElementById('roomCodeModal');
-            if (existing) existing.remove();
-
-            const inputContainer = document.createElement('div');
-            inputContainer.className = 'fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4';
-            inputContainer.id = 'roomCodeModal';
-            inputContainer.innerHTML = `
-                <div class="glass-card p-6 rounded-3xl max-w-md w-full border-2 border-[var(--primary-glow)] flex flex-col gap-4">
-                    <h3 class="font-display text-xl text-white">🔑 Enter Class Sync Room Code</h3>
-                    <p class="text-sm text-white/70 font-heading">Ensure all student Chromebooks and your teacher screen use the EXACT same Room Code so questions sync live.</p>
-                    <input type="text" id="roomCodeInput" value="${currentRoomCode}" class="w-full bg-black/60 border border-white/20 rounded-xl p-3 text-white font-mono text-lg uppercase outline-none focus:border-[var(--primary-glow)]" placeholder="E.g. HYPE-CLASS-1">
-                    <div class="flex justify-end gap-2">
-                        <button onclick="document.getElementById('roomCodeModal').remove()" class="px-4 py-2 rounded-xl text-white/60 hover:text-white font-heading font-bold text-sm">Cancel</button>
-                        <button onclick="saveRoomCode()" class="btn-gradient px-5 py-2 rounded-xl text-white font-heading font-bold text-sm">Connect Room</button>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(inputContainer);
-        }
-
-        function saveRoomCode() {
-            const input = document.getElementById('roomCodeInput');
-            if (input && input.value.trim()) {
-                currentRoomCode = input.value.trim().toUpperCase();
-                localStorage.setItem('hype_room_code', currentRoomCode);
-                const modal = document.getElementById('roomCodeModal');
-                if (modal) modal.remove();
-                
-                loadLocalData();
-                initCloudSync();
-                showToast(`Switched to Room Code: ${currentRoomCode}`);
-            }
-        }
-
-        function showToast(message) {
-            const container = document.getElementById('toast-container');
-            if (!container) return;
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.innerText = message;
-            container.appendChild(toast);
-            setTimeout(() => {
-                if(toast.parentElement) toast.remove();
-            }, 3000);
-        }
-
-        function escapeHTML(str) {
-            return str.replace(/[&<>'"]/g, tag => ({
-                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-            }[tag] || tag));
-        }
-
-        function switchClass(classKey) {
-            if (!CLASS_CONFIGS[classKey]) return;
-            currentClassId = classKey;
-            localStorage.setItem('hype_active_class', classKey);
-
-            const config = CLASS_CONFIGS[classKey];
-
-            document.documentElement.style.setProperty('--primary-glow', config.primary);
-            document.documentElement.style.setProperty('--secondary-glow', config.secondary);
-            document.documentElement.style.setProperty('--accent-glow', config.accent);
-            document.body.style.backgroundColor = config.bgDark;
-
-            document.getElementById('classNameHeader').innerText = config.name;
-            document.getElementById('classIconDisplay').innerText = config.icon;
-            document.getElementById('classSubhead').innerText = config.subhead;
-            
-            const badge = document.getElementById('heroBadge');
-            badge.className = `px-5 py-1.5 rounded-full text-xs font-heading font-bold uppercase tracking-widest inline-block mb-3 shadow-lg ${config.badgeClass}`;
-            badge.innerText = config.heroBadge;
-
-            document.getElementById('heroDescription').innerText = config.tagline;
-            document.getElementById('activeClassTag').innerText = `Active: ${config.name}`;
-
-            document.querySelectorAll('.class-tab').forEach(tab => tab.classList.remove('active'));
-            const activeTab = document.getElementById(`tab-${classKey}`);
-            if (activeTab) activeTab.classList.add('active');
-
-            initCanvasParticles();
-            renderQuestions();
-            showToast(`Switched to ${config.name} Hub ${config.icon}`);
-        }
-
-        const qaForm = document.getElementById('qaForm');
-        const questionInput = document.getElementById('questionInput');
 
         if (qaForm) {
             qaForm.addEventListener('submit', async (e) => {
@@ -592,10 +480,11 @@
 
                     if (db && currentUser) {
                         try {
-                            const questionsCol = collection(db, 'artifacts', defaultAppId, 'public', 'data', 'questions');
+                            const questionsCol = collection(db, 'questions');
                             await addDoc(questionsCol, newQ);
                         } catch (err) {
                             console.error("Cloud submission failed, saving locally:", err);
+                            showToast("⚠️ Database Write Blocked: Check Rules");
                             newQ.id = Date.now();
                             if(!classQuestions[currentClassId]) classQuestions[currentClassId] = [];
                             classQuestions[currentClassId].unshift(newQ);
@@ -620,7 +509,7 @@
                         colors: [config.primary, config.secondary, config.accent]
                     });
                     
-                    showToast("🔥 Question submitted anonymously!");
+                    showToast("🔥 Question submitted!");
                 }
             });
         }
@@ -647,7 +536,7 @@
             
             if (q) {
                 if (db && currentUser && q.firestoreId) {
-                    const docRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'questions', q.firestoreId);
+                    const docRef = doc(db, 'questions', q.firestoreId);
                     await updateDoc(docRef, { votes: (q.votes || 0) + 1 });
                 } else {
                     q.votes = (q.votes || 0) + 1;
@@ -664,7 +553,7 @@
             
             if (q) {
                 if (db && currentUser && q.firestoreId) {
-                    const docRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'questions', q.firestoreId);
+                    const docRef = doc(db, 'questions', q.firestoreId);
                     await updateDoc(docRef, { discussed: !q.discussed });
                 } else {
                     q.discussed = !q.discussed;
@@ -680,7 +569,7 @@
             const q = list.find(item => item.firestoreId === id || item.id === id || String(item.id) === String(id));
 
             if (q && db && currentUser && q.firestoreId) {
-                const docRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'questions', q.firestoreId);
+                const docRef = doc(db, 'questions', q.firestoreId);
                 await deleteDoc(docRef);
             } else {
                 classQuestions[currentClassId] = (classQuestions[currentClassId] || []).filter(item => item.id !== id && item.firestoreId !== id);
@@ -708,7 +597,7 @@
                 if (db && currentUser) {
                     for (const q of list) {
                         if (q.firestoreId) {
-                            const docRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'questions', q.firestoreId);
+                            const docRef = doc(db, 'questions', q.firestoreId);
                             await deleteDoc(docRef);
                         }
                     }
