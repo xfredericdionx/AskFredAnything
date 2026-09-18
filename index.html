@@ -375,6 +375,17 @@
         let resetConfirmState = false;
         let unsubscribeListener = null;
 
+        let userVotes = [];
+        try {
+            userVotes = JSON.parse(localStorage.getItem('hype_user_votes') || '[]');
+        } catch(e) {
+            userVotes = [];
+        }
+
+        function saveUserVotes() {
+            localStorage.setItem('hype_user_votes', JSON.stringify(userVotes));
+        }
+
         let db = null;
         let auth = null;
 
@@ -630,11 +641,26 @@
             const q = list.find(item => item.firestoreId === id || item.id === id || String(item.id) === String(id));
             
             if (q) {
+                const qIdStr = String(id);
+                const hasVoted = userVotes.includes(qIdStr);
+                let newVotes = q.votes || 0;
+
+                if (hasVoted) {
+                    newVotes = Math.max(0, newVotes - 1);
+                    userVotes = userVotes.filter(vId => vId !== qIdStr);
+                    showToast("Vote removed");
+                } else {
+                    newVotes = newVotes + 1;
+                    userVotes.push(qIdStr);
+                    showToast("🔥 Upvoted!");
+                }
+                saveUserVotes();
+
                 if (db && q.firestoreId) {
                     const docRef = doc(db, 'questions', q.firestoreId);
-                    await updateDoc(docRef, { votes: (q.votes || 0) + 1 });
+                    await updateDoc(docRef, { votes: newVotes });
                 } else {
-                    q.votes = (q.votes || 0) + 1;
+                    q.votes = newVotes;
                     saveLocalData();
                     renderQuestions();
                 }
@@ -732,6 +758,11 @@
 
             sorted.forEach(q => {
                 const qId = q.firestoreId || q.id;
+                const hasVoted = userVotes.includes(String(qId));
+                const voteBtnStyle = hasVoted 
+                    ? "bg-amber-500/30 border border-amber-400 text-amber-300 font-bold shadow-[0_0_12px_rgba(251,191,36,0.35)]" 
+                    : "bg-white/10 hover:bg-white/25 border border-white/20 text-white font-bold";
+
                 const card = document.createElement('div');
                 card.className = `q-card glass-card rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${q.discussed ? 'discussed' : ''}`;
                 
@@ -740,8 +771,8 @@
                         ${escapeHTML(q.text)}
                     </div>
                     <div class="flex items-center gap-2 w-full sm:w-auto justify-end border-t sm:border-t-0 border-white/10 pt-3 sm:pt-0">
-                        <button class="bg-white/10 hover:bg-white/25 border border-white/20 text-white px-3.5 py-1.5 rounded-xl font-heading font-bold text-sm flex items-center gap-1.5 transition" onclick="upvote('${qId}', event)" title="Upvote">
-                            🔥 <span>${q.votes || 1}</span>
+                        <button class="${voteBtnStyle} px-3.5 py-1.5 rounded-xl font-heading text-sm flex items-center gap-1.5 transition" onclick="upvote('${qId}', event)" title="${hasVoted ? 'Click to remove vote' : 'Upvote'}">
+                            🔥 <span>${q.votes || 0}</span>
                         </button>
                         <button class="btn-gradient text-white px-4 py-1.5 rounded-xl font-heading font-bold text-sm transition" onclick="openSpotlight('${qId}')">
                             🎤 Discuss
