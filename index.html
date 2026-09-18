@@ -116,12 +116,10 @@
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.7);
             font-family: var(--font-heading);
             font-weight: 700;
-            animation: slideIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards, fadeOut 0.5s ease-in 2.5s forwards;
+            animation: slideIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
         @keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
 
-        /* Class theme-specific custom badges */
         .badge-helldivers { background: linear-gradient(90deg, #ffe600, #ff2a00); color: #000; font-family: var(--font-action); }
         .badge-la_peace { background: linear-gradient(90deg, #9b51e0, #00f2fe); color: #fff; }
         .badge-mr_clean { background: linear-gradient(90deg, #e0e0e0, #00d2ff); color: #000; }
@@ -131,10 +129,12 @@
 </head>
 <body class="min-h-screen flex flex-col items-center p-3 sm:p-6 md:p-8">
 
+    <!-- Dynamic Animated Background Canvas -->
     <canvas id="bgCanvas"></canvas>
 
     <div class="w-full max-w-4xl flex flex-col gap-6">
         
+        <!-- Header Bar & Room Code Sync Control -->
         <div class="glass-card p-4 rounded-3xl flex flex-col gap-3">
             <div class="flex flex-wrap justify-between items-center px-2 gap-2">
                 <span class="font-display text-sm sm:text-base text-[#ffee00] tracking-widest uppercase flex items-center gap-2">
@@ -173,6 +173,7 @@
             </div>
         </div>
 
+        <!-- Class Title Banner -->
         <div class="glass-card flex flex-row justify-between items-center p-4 rounded-2xl gap-3">
             <div class="flex items-center gap-2">
                 <span id="classIconDisplay" class="text-3xl">🚀</span>
@@ -191,6 +192,7 @@
             </div>
         </div>
 
+        <!-- Hero Title -->
         <header class="text-center py-2 relative">
             <div id="heroBadge" class="px-5 py-1.5 rounded-full text-xs font-heading font-bold uppercase tracking-widest inline-block mb-3 shadow-lg badge-helldivers">
                 🔒 100% Anonymous Classroom Discussion
@@ -203,6 +205,7 @@
             </p>
         </header>
 
+        <!-- Question Submission Form -->
         <div class="glass-card p-5 sm:p-7 rounded-3xl border-t-2 border-t-white/20">
             <form id="qaForm" class="flex flex-col gap-4">
                 <div class="flex justify-between items-center">
@@ -222,6 +225,7 @@
             </form>
         </div>
 
+        <!-- Class Questions Feed Section -->
         <div class="flex flex-col gap-4 mb-16">
             <div class="flex justify-between items-center px-2">
                 <h2 class="font-display text-xl sm:text-2xl text-white tracking-wide flex items-center gap-2">
@@ -239,6 +243,7 @@
         </div>
     </div>
 
+    <!-- Fullscreen Spotlight Modal -->
     <div id="spotlightModal" class="fixed inset-0 bg-[#07060f]/95 backdrop-blur-2xl z-50 hidden flex-col justify-between p-6 sm:p-10 transition-all">
         <div class="flex justify-between items-center w-full max-w-6xl mx-auto">
             <div class="flex items-center gap-3">
@@ -275,7 +280,7 @@
         </div>
     </div>
 
-    <!-- Notification Container -->
+    <!-- Notification Toast Container -->
     <div id="toast-container"></div>
 
     <script type="module">
@@ -294,8 +299,7 @@
                 secondary: "#ff0044",
                 accent: "#ffe600",
                 badgeClass: "badge-helldivers",
-                bgDark: "#05070f",
-                seeds: []
+                bgDark: "#05070f"
             },
             la_peace: {
                 name: "La Peace",
@@ -307,8 +311,7 @@
                 secondary: "#ff007f",
                 accent: "#00f2fe",
                 badgeClass: "badge-la_peace",
-                bgDark: "#0a0514",
-                seeds: []
+                bgDark: "#0a0514"
             },
             mr_clean: {
                 name: "Mr Clean's Disciple",
@@ -320,8 +323,7 @@
                 secondary: "#ffffff",
                 accent: "#ffe600",
                 badgeClass: "badge-mr_clean",
-                bgDark: "#040e1a",
-                seeds: []
+                bgDark: "#040e1a"
             },
             sunny_seniors: {
                 name: "Sunny Seniors",
@@ -333,8 +335,7 @@
                 secondary: "#feb47b",
                 accent: "#ffee00",
                 badgeClass: "badge-sunny_seniors",
-                bgDark: "#120806",
-                seeds: []
+                bgDark: "#120806"
             },
             bald_furious: {
                 name: "Bald and Furious",
@@ -346,8 +347,7 @@
                 secondary: "#ffaa00",
                 accent: "#00f2fe",
                 badgeClass: "badge-bald_furious",
-                bgDark: "#120307",
-                seeds: []
+                bgDark: "#120307"
             }
         };
 
@@ -392,7 +392,8 @@
 
         async function initCloudSync() {
             updateSyncBadge(false, "Connecting to Cloud...");
-            document.getElementById('roomCodeDisplay').innerText = currentRoomCode;
+            const roomDisp = document.getElementById('roomCodeDisplay');
+            if (roomDisp) roomDisp.innerText = currentRoomCode;
 
             try {
                 if (typeof __firebase_config !== 'undefined' && __firebase_config) {
@@ -401,7 +402,6 @@
                     db = getFirestore(app);
                     auth = getAuth(app);
 
-                    // Ensure authentication finishes BEFORE attempting any Firestore query (Rule 3)
                     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                         const userCred = await signInWithCustomToken(auth, __initial_auth_token);
                         currentUser = userCred.user;
@@ -412,11 +412,11 @@
 
                     setupLiveListener();
                 } else {
-                    updateSyncBadge(false, `Local Mode (Room: ${currentRoomCode})`);
+                    updateSyncBadge(false, `Local Mode (${currentRoomCode})`);
                 }
             } catch (err) {
-                console.warn("Cloud sync initialization error:", err);
-                updateSyncBadge(false, `Offline / Local Mode`);
+                console.warn("Cloud sync initialization notice:", err);
+                updateSyncBadge(false, `Local Mode (${currentRoomCode})`);
             }
         }
 
@@ -441,7 +441,6 @@
                 unsubscribeListener();
             }
 
-            // Path adhering strictly to Rule 1 using Room Code to pair Chromebooks
             const targetAppId = `${defaultAppId}-${currentRoomCode.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
             const questionsCol = collection(db, 'artifacts', targetAppId, 'public', 'data', 'questions');
             
@@ -454,7 +453,6 @@
                     });
                 });
 
-                // Clear and repopulate class questions from live Firestore database
                 Object.keys(CLASS_CONFIGS).forEach(classKey => {
                     const matched = allQuestions.filter(q => q.classId === classKey);
                     classQuestions[classKey] = matched;
@@ -465,11 +463,14 @@
                 updateSyncBadge(true, `🟢 Live Sync: ${currentRoomCode}`);
             }, (error) => {
                 console.error("Firestore snapshot error:", error);
-                updateSyncBadge(false, `Sync Error - Retrying...`);
+                updateSyncBadge(false, `Sync Error (${currentRoomCode})`);
             });
         }
 
         function changeRoomCodePrompt() {
+            const existing = document.getElementById('roomCodeModal');
+            if (existing) existing.remove();
+
             const inputContainer = document.createElement('div');
             inputContainer.className = 'fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4';
             inputContainer.id = 'roomCodeModal';
@@ -487,7 +488,7 @@
             document.body.appendChild(inputContainer);
         }
 
-        window.saveRoomCode = function() {
+        function saveRoomCode() {
             const input = document.getElementById('roomCodeInput');
             if (input && input.value.trim()) {
                 currentRoomCode = input.value.trim().toUpperCase();
@@ -497,61 +498,128 @@
                 
                 loadLocalData();
                 initCloudSync();
-                showToast(`Switched to Room Sync Code: ${currentRoomCode}`);
+                showToast(`Switched to Room Code: ${currentRoomCode}`);
             }
-        };
+        }
+
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerText = message;
+            container.appendChild(toast);
+            setTimeout(() => {
+                if(toast.parentElement) toast.remove();
+            }, 3000);
+        }
+
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            }[tag] || tag));
+        }
+
+        function switchClass(classKey) {
+            if (!CLASS_CONFIGS[classKey]) return;
+            currentClassId = classKey;
+            localStorage.setItem('hype_active_class', classKey);
+
+            const config = CLASS_CONFIGS[classKey];
+
+            document.documentElement.style.setProperty('--primary-glow', config.primary);
+            document.documentElement.style.setProperty('--secondary-glow', config.secondary);
+            document.documentElement.style.setProperty('--accent-glow', config.accent);
+            document.body.style.backgroundColor = config.bgDark;
+
+            document.getElementById('classNameHeader').innerText = config.name;
+            document.getElementById('classIconDisplay').innerText = config.icon;
+            document.getElementById('classSubhead').innerText = config.subhead;
+            
+            const badge = document.getElementById('heroBadge');
+            badge.className = `px-5 py-1.5 rounded-full text-xs font-heading font-bold uppercase tracking-widest inline-block mb-3 shadow-lg ${config.badgeClass}`;
+            badge.innerText = config.heroBadge;
+
+            document.getElementById('heroDescription').innerText = config.tagline;
+            document.getElementById('activeClassTag').innerText = `Active: ${config.name}`;
+
+            document.querySelectorAll('.class-tab').forEach(tab => tab.classList.remove('active'));
+            const activeTab = document.getElementById(`tab-${classKey}`);
+            if (activeTab) activeTab.classList.add('active');
+
+            initCanvasParticles();
+            renderQuestions();
+            showToast(`Switched to ${config.name} Hub ${config.icon}`);
+        }
 
         const qaForm = document.getElementById('qaForm');
         const questionInput = document.getElementById('questionInput');
 
-        qaForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const text = questionInput.value.trim();
+        if (qaForm) {
+            qaForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const text = questionInput.value.trim();
 
-            if (text) {
-                const newQ = {
-                    classId: currentClassId,
-                    text: text,
-                    votes: 1,
-                    discussed: false,
-                    createdAt: Date.now()
-                };
+                if (text) {
+                    const newQ = {
+                        classId: currentClassId,
+                        text: text,
+                        votes: 1,
+                        discussed: false,
+                        createdAt: Date.now()
+                    };
 
-                const targetAppId = `${defaultAppId}-${currentRoomCode.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+                    const targetAppId = `${defaultAppId}-${currentRoomCode.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
 
-                if (db && currentUser) {
-                    try {
-                        const questionsCol = collection(db, 'artifacts', targetAppId, 'public', 'data', 'questions');
-                        await addDoc(questionsCol, newQ);
-                    } catch (err) {
-                        console.error("Cloud submission failed:", err);
+                    if (db && currentUser) {
+                        try {
+                            const questionsCol = collection(db, 'artifacts', targetAppId, 'public', 'data', 'questions');
+                            await addDoc(questionsCol, newQ);
+                        } catch (err) {
+                            console.error("Cloud submission failed, saving locally:", err);
+                            newQ.id = Date.now();
+                            if(!classQuestions[currentClassId]) classQuestions[currentClassId] = [];
+                            classQuestions[currentClassId].unshift(newQ);
+                            saveLocalData();
+                            renderQuestions();
+                        }
+                    } else {
                         newQ.id = Date.now();
                         if(!classQuestions[currentClassId]) classQuestions[currentClassId] = [];
                         classQuestions[currentClassId].unshift(newQ);
                         saveLocalData();
                         renderQuestions();
                     }
-                } else {
-                    newQ.id = Date.now();
-                    if(!classQuestions[currentClassId]) classQuestions[currentClassId] = [];
-                    classQuestions[currentClassId].unshift(newQ);
-                    saveLocalData();
-                    renderQuestions();
+
+                    questionInput.value = '';
+
+                    const config = CLASS_CONFIGS[currentClassId];
+                    confetti({
+                        particleCount: 90,
+                        spread: 80,
+                        origin: { y: 0.8 },
+                        colors: [config.primary, config.secondary, config.accent]
+                    });
+                    
+                    showToast("🔥 Question submitted anonymously!");
                 }
+            });
+        }
 
-                questionInput.value = '';
-
-                const config = CLASS_CONFIGS[currentClassId];
-                confetti({
-                    particleCount: 90,
-                    spread: 80,
-                    origin: { y: 0.8 },
-                    colors: [config.primary, config.secondary, config.accent]
-                });
-                
-                showToast("🔥 Question submitted anonymously!");
+        function setFilter(filter) {
+            currentFilter = filter;
+            const topBtn = document.getElementById('filterTop');
+            const newBtn = document.getElementById('filterNew');
+            
+            if(filter === 'top') {
+                topBtn.className = "tab-btn px-4 py-1.5 rounded-lg font-heading font-bold text-xs sm:text-sm text-white bg-white/20 transition";
+                newBtn.className = "tab-btn px-4 py-1.5 rounded-lg font-heading font-bold text-xs sm:text-sm text-white/60 hover:text-white transition";
+            } else {
+                newBtn.className = "tab-btn px-4 py-1.5 rounded-lg font-heading font-bold text-xs sm:text-sm text-white bg-white/20 transition";
+                topBtn.className = "tab-btn px-4 py-1.5 rounded-lg font-heading font-bold text-xs sm:text-sm text-white/60 hover:text-white transition";
             }
-        });
+            renderQuestions();
+        }
 
         async function upvote(id, e) {
             if(e) e.stopPropagation();
@@ -599,7 +667,7 @@
                 const docRef = doc(db, 'artifacts', targetAppId, 'public', 'data', 'questions', q.firestoreId);
                 await deleteDoc(docRef);
             } else {
-                classQuestions[currentClassId] = classQuestions[currentClassId].filter(item => item.id !== id && item.firestoreId !== id);
+                classQuestions[currentClassId] = (classQuestions[currentClassId] || []).filter(item => item.id !== id && item.firestoreId !== id);
                 saveLocalData();
                 renderQuestions();
             }
@@ -625,255 +693,6 @@
                     for (const q of list) {
                         if (q.firestoreId) {
                             const docRef = doc(db, 'artifacts', targetAppId, 'public', 'data', 'questions', q.firestoreId);
-                            await deleteDoc(docRef);
-                        }
-                    }
-                }
-                classQuestions[currentClassId] = [];
-                saveLocalData();
-                renderQuestions();
-                showToast("🧹 Class hub reset successfully!");
-                resetConfirmState = false;
-                btn.innerText = "🧹 Reset Class";
-                btn.classList.remove('bg-red-600', 'border-red-400');
-            }
-        }
-
-        window.changeRoomCodePrompt = changeRoomCodePrompt;
-        window.switchClass = switchClass;
-        window.setFilter = setFilter;
-        window.upvote = upvote;
-        window.toggleDiscussed = toggleDiscussed;
-        window.deleteQuestion = deleteQuestion;
-        window.confirmReset = confirmReset;
-        window.openSpotlight = openSpotlight;
-        window.closeSpotlight = closeSpotlight;
-        window.markSpotlightDiscussed = markSpotlightDiscussed;
-        window.pickRandomQuestion = pickRandomQuestion;
-        window.setTimerSeconds = setTimerSeconds;
-        window.toggleTimer = toggleTimer;
-        window.resetTimer = resetTimer;
-
-        window.onload = function() {
-            switchClass(currentClassId);
-            renderCanvasBackdrop();
-            initCloudSync();
-        };
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeSpotlight();
-        });
-        
-            onSnapshot(questionsCol, (snapshot) => {
-                allQuestions = [];
-                snapshot.forEach((docSnap) => {
-                    allQuestions.push({
-                        firestoreId: docSnap.id,
-                        ...docSnap.data()
-                    });
-                });
-
-                // Clear and repopulate class questions from live Firestore database
-                Object.keys(CLASS_CONFIGS).forEach(classKey => {
-                    const matched = allQuestions.filter(q => q.classId === classKey);
-                    classQuestions[classKey] = matched;
-                });
-
-                saveLocalData();
-                renderQuestions();
-                updateSyncBadge(true, "Live Chromebook Sync");
-            }, (error) => {
-                console.error("Firestore snapshot error:", error);
-                updateSyncBadge(false, "Sync Interrupted");
-            });
-        }
-
-        function showToast(message) {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.innerText = message;
-            container.appendChild(toast);
-            setTimeout(() => {
-                if(toast.parentElement) toast.remove();
-            }, 3000);
-        }
-
-        function escapeHTML(str) {
-            return str.replace(/[&<>'"]/g, tag => ({
-                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-            }[tag] || tag));
-        }
-
-        function switchClass(classKey) {
-            if (!CLASS_CONFIGS[classKey]) return;
-            currentClassId = classKey;
-            localStorage.setItem('hype_active_class', classKey);
-
-            const config = CLASS_CONFIGS[classKey];
-
-            // Update CSS Root Variables
-            document.documentElement.style.setProperty('--primary-glow', config.primary);
-            document.documentElement.style.setProperty('--secondary-glow', config.secondary);
-            document.documentElement.style.setProperty('--accent-glow', config.accent);
-            document.body.style.backgroundColor = config.bgDark;
-
-            // Update UI Header details
-            document.getElementById('classNameHeader').innerText = config.name;
-            document.getElementById('classIconDisplay').innerText = config.icon;
-            document.getElementById('classSubhead').innerText = config.subhead;
-            
-            const badge = document.getElementById('heroBadge');
-            badge.className = `px-5 py-1.5 rounded-full text-xs font-heading font-bold uppercase tracking-widest inline-block mb-3 shadow-lg ${config.badgeClass}`;
-            badge.innerText = config.heroBadge;
-
-            document.getElementById('heroDescription').innerText = config.tagline;
-            document.getElementById('activeClassTag').innerText = `Active: ${config.name}`;
-
-            // Update tabs
-            document.querySelectorAll('.class-tab').forEach(tab => tab.classList.remove('active'));
-            const activeTab = document.getElementById(`tab-${classKey}`);
-            if (activeTab) activeTab.classList.add('active');
-
-            // Reset background particle engine for new theme
-            initCanvasParticles();
-
-            renderQuestions();
-            showToast(`Switched to ${config.name} Hub ${config.icon}`);
-        }
-
-        const qaForm = document.getElementById('qaForm');
-        const questionInput = document.getElementById('questionInput');
-
-        qaForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const text = questionInput.value.trim();
-
-            if (text) {
-                const newQ = {
-                    classId: currentClassId,
-                    text: text,
-                    votes: 1,
-                    discussed: false,
-                    createdAt: Date.now()
-                };
-
-                if (db && currentUser) {
-                    try {
-                        const questionsCol = collection(db, 'artifacts', appId, 'public', 'data', 'questions');
-                        await addDoc(questionsCol, newQ);
-                    } catch (err) {
-                        console.error("Cloud submission failed:", err);
-                        newQ.id = Date.now();
-                        classQuestions[currentClassId].unshift(newQ);
-                        saveLocalData();
-                        renderQuestions();
-                    }
-                } else {
-                    newQ.id = Date.now();
-                    classQuestions[currentClassId].unshift(newQ);
-                    saveLocalData();
-                    renderQuestions();
-                }
-
-                questionInput.value = '';
-
-                // Trigger confetti styled for current class
-                const config = CLASS_CONFIGS[currentClassId];
-                confetti({
-                    particleCount: 90,
-                    spread: 80,
-                    origin: { y: 0.8 },
-                    colors: [config.primary, config.secondary, config.accent]
-                });
-                
-                showToast("🔥 Question submitted anonymously!");
-            }
-        });
-
-        function setFilter(filter) {
-            currentFilter = filter;
-            const topBtn = document.getElementById('filterTop');
-            const newBtn = document.getElementById('filterNew');
-            
-            if(filter === 'top') {
-                topBtn.className = "tab-btn px-4 py-1.5 rounded-lg font-heading font-bold text-xs sm:text-sm text-white bg-white/20 transition";
-                newBtn.className = "tab-btn px-4 py-1.5 rounded-lg font-heading font-bold text-xs sm:text-sm text-white/60 hover:text-white transition";
-            } else {
-                newBtn.className = "tab-btn px-4 py-1.5 rounded-lg font-heading font-bold text-xs sm:text-sm text-white bg-white/20 transition";
-                topBtn.className = "tab-btn px-4 py-1.5 rounded-lg font-heading font-bold text-xs sm:text-sm text-white/60 hover:text-white transition";
-            }
-            renderQuestions();
-        }
-
-        async function upvote(id, e) {
-            if(e) e.stopPropagation();
-            const list = classQuestions[currentClassId] || [];
-            const q = list.find(item => item.firestoreId === id || item.id === id || String(item.id) === String(id));
-            
-            if (q) {
-                if (db && currentUser && q.firestoreId) {
-                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'questions', q.firestoreId);
-                    await updateDoc(docRef, { votes: (q.votes || 0) + 1 });
-                } else {
-                    q.votes = (q.votes || 0) + 1;
-                    saveLocalData();
-                    renderQuestions();
-                }
-            }
-        }
-
-        async function toggleDiscussed(id, e) {
-            if(e) e.stopPropagation();
-            const list = classQuestions[currentClassId] || [];
-            const q = list.find(item => item.firestoreId === id || item.id === id || String(item.id) === String(id));
-            
-            if (q) {
-                if (db && currentUser && q.firestoreId) {
-                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'questions', q.firestoreId);
-                    await updateDoc(docRef, { discussed: !q.discussed });
-                } else {
-                    q.discussed = !q.discussed;
-                    saveLocalData();
-                    renderQuestions();
-                }
-            }
-        }
-
-        async function deleteQuestion(id, e) {
-            if(e) e.stopPropagation();
-            const list = classQuestions[currentClassId] || [];
-            const q = list.find(item => item.firestoreId === id || item.id === id || String(item.id) === String(id));
-
-            if (q && db && currentUser && q.firestoreId) {
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'questions', q.firestoreId);
-                await deleteDoc(docRef);
-            } else {
-                classQuestions[currentClassId] = classQuestions[currentClassId].filter(item => item.id !== id && item.firestoreId !== id);
-                saveLocalData();
-                renderQuestions();
-            }
-            showToast("🗑️ Question removed from class feed");
-        }
-
-        async function confirmReset() {
-            const btn = document.getElementById('resetBtn');
-            if(!resetConfirmState) {
-                resetConfirmState = true;
-                btn.innerText = "⚠️ Confirm Erase?";
-                btn.classList.add('bg-red-600', 'border-red-400');
-                
-                setTimeout(() => {
-                    resetConfirmState = false;
-                    btn.innerText = "🧹 Reset Class";
-                    btn.classList.remove('bg-red-600', 'border-red-400');
-                }, 3000);
-            } else {
-                const list = classQuestions[currentClassId] || [];
-                if (db && currentUser) {
-                    for (const q of list) {
-                        if (q.firestoreId) {
-                            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'questions', q.firestoreId);
                             await deleteDoc(docRef);
                         }
                     }
@@ -921,7 +740,7 @@
                     </div>
                     <div class="flex items-center gap-2 w-full sm:w-auto justify-end border-t sm:border-t-0 border-white/10 pt-3 sm:pt-0">
                         <button class="bg-white/10 hover:bg-white/25 border border-white/20 text-white px-3.5 py-1.5 rounded-xl font-heading font-bold text-sm flex items-center gap-1.5 transition" onclick="upvote('${qId}', event)" title="Upvote">
-                            🔥 <span>${q.votes}</span>
+                            🔥 <span>${q.votes || 1}</span>
                         </button>
                         <button class="btn-gradient text-white px-4 py-1.5 rounded-xl font-heading font-bold text-sm transition" onclick="openSpotlight('${qId}')">
                             🎤 Discuss
@@ -940,7 +759,7 @@
         }
 
         function openSpotlight(id) {
-            const list = classQuestions[currentClassId];
+            const list = classQuestions[currentClassId] || [];
             const q = list.find(item => item.firestoreId === id || item.id === id || String(item.id) === String(id));
             if (!q) return;
 
@@ -972,7 +791,7 @@
         }
 
         function pickRandomQuestion() {
-            const undiscussed = classQuestions[currentClassId].filter(q => !q.discussed);
+            const undiscussed = (classQuestions[currentClassId] || []).filter(q => !q.discussed);
             if (undiscussed.length === 0) {
                 showToast("No active questions left to pick in this class!");
                 return;
@@ -1048,8 +867,7 @@
                     speedX: (Math.random() - 0.5) * 1.5,
                     speedY: (Math.random() - 0.5) * 1.5,
                     opacity: Math.random() * 0.7 + 0.3,
-                    pulse: Math.random() * 0.05 + 0.01,
-                    shape: currentClassId
+                    pulse: Math.random() * 0.05 + 0.01
                 });
             }
         }
@@ -1104,7 +922,6 @@
             requestAnimationFrame(renderCanvasBackdrop);
         }
 
-        // Attach global handler methods for inline HTML event attributes
         window.switchClass = switchClass;
         window.setFilter = setFilter;
         window.upvote = upvote;
@@ -1118,6 +935,8 @@
         window.setTimerSeconds = setTimerSeconds;
         window.toggleTimer = toggleTimer;
         window.resetTimer = resetTimer;
+        window.changeRoomCodePrompt = changeRoomCodePrompt;
+        window.saveRoomCode = saveRoomCode;
 
         window.onload = function() {
             switchClass(currentClassId);
