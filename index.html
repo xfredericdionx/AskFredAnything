@@ -148,6 +148,10 @@
                     <button onclick="changeRoomCodePrompt()" class="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-white/10 hover:bg-white/20 text-white/90 border border-white/20 transition flex items-center gap-1">
                         🔑 Room: <span id="roomCodeDisplay" class="text-[#ffee00]">HYPE-CLASS-1</span>
                     </button>
+                    <!-- 🔒 Teacher Mode Toggle Button -->
+                    <button id="teacherModeBtn" onclick="toggleTeacherModePrompt()" class="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-red-500/20 hover:bg-red-500/40 text-red-300 border border-red-500/40 transition flex items-center gap-1 cursor-pointer">
+                        🔒 Teacher Mode
+                    </button>
                     <span id="activeClassTag" class="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-white/10 text-white/80 border border-white/20">
                         Helldivers
                     </span>
@@ -187,7 +191,8 @@
                 <button onclick="pickRandomQuestion()" class="btn-gradient text-white px-3 sm:px-5 py-2.5 rounded-xl font-heading font-bold text-xs sm:text-sm flex items-center gap-1.5">
                     🎲 <span>Random</span>
                 </button>
-                <button onclick="confirmReset()" id="resetBtn" class="bg-white/10 hover:bg-red-500/20 border border-white/20 hover:border-red-400 text-white px-3 sm:px-4 py-2.5 rounded-xl font-heading font-bold text-xs sm:text-sm transition">
+                <!-- Reset button only visible in Teacher Mode -->
+                <button onclick="confirmReset()" id="resetBtn" class="hidden bg-white/10 hover:bg-red-500/20 border border-white/20 hover:border-red-400 text-white px-3 sm:px-4 py-2.5 rounded-xl font-heading font-bold text-xs sm:text-sm transition">
                     🧹 Reset Class
                 </button>
             </div>
@@ -375,6 +380,10 @@
         let resetConfirmState = false;
         let unsubscribeListener = null;
 
+        // 🔒 Teacher Mode State (Default: Off for students)
+        let isTeacherMode = localStorage.getItem('hype_teacher_mode') === 'true';
+        const TEACHER_PIN = "6767"; // Teacher PIN
+
         let userVotes = [];
         try {
             userVotes = JSON.parse(localStorage.getItem('hype_user_votes') || '[]');
@@ -386,68 +395,41 @@
             localStorage.setItem('hype_user_votes', JSON.stringify(userVotes));
         }
 
-        let db = null;
-        let auth = null;
-
-        function showToast(message) {
-            const container = document.getElementById('toast-container');
-            if (!container) return;
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.innerText = message;
-            container.appendChild(toast);
-            setTimeout(() => {
-                toast.remove();
-            }, 4000);
-        }
-
-        function escapeHTML(str) {
-            if (!str) return '';
-            return str.replace(/[&<>'"]/g, 
-                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-            );
-        }
-
-        function updateSyncBadge(isLive, text) {
-            const badge = document.getElementById('syncStatusBadge');
-            const label = document.getElementById('syncStatusText');
-            if (!badge || !label) return;
-
-            label.innerText = text;
-            if (isLive) {
-                badge.className = "text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1.5 cursor-pointer";
-            } else {
-                badge.className = "text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1.5 cursor-pointer";
-            }
-        }
-
-        function saveLocalData() {
-            localStorage.setItem('hype_class_questions', JSON.stringify(classQuestions));
-        }
-
-        function loadLocalData() {
-            try {
-                const saved = localStorage.getItem('hype_class_questions');
-                if (saved) {
-                    classQuestions = JSON.parse(saved);
-                }
-            } catch(e) {
-                classQuestions = {};
-            }
-        }
-
-        function changeRoomCodePrompt() {
-            const newCode = prompt("Enter a Shared Room Code for your class (e.g., HYPE-CLASS-1, MATH-PERIOD-2):", currentRoomCode);
-            if (newCode && newCode.trim()) {
-                currentRoomCode = newCode.trim().toUpperCase();
-                localStorage.setItem('hype_room_code', currentRoomCode);
-                const roomDisp = document.getElementById('roomCodeDisplay');
-                if (roomDisp) roomDisp.innerText = currentRoomCode;
-                showToast(`🔑 Switched Room Code to: ${currentRoomCode}`);
-                if (db) {
-                    setupLiveListener();
+        function updateTeacherUI() {
+            const btn = document.getElementById('teacherModeBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            if (btn) {
+                if (isTeacherMode) {
+                    btn.innerText = "🔓 Teacher Active";
+                    btn.className = "text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 transition flex items-center gap-1 cursor-pointer";
                 } else {
+                    btn.innerText = "🔒 Student View";
+                    btn.className = "text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider bg-white/10 hover:bg-white/20 text-white/70 border border-white/20 transition flex items-center gap-1 cursor-pointer";
+                }
+            }
+            if (resetBtn) {
+                if (isTeacherMode) resetBtn.classList.remove('hidden');
+                else resetBtn.classList.add('hidden');
+            }
+        }
+
+        function toggleTeacherModePrompt() {
+            if (isTeacherMode) {
+                isTeacherMode = false;
+                localStorage.setItem('hype_teacher_mode', 'false');
+                showToast("🔒 Switched to Student View Mode");
+                updateTeacherUI();
+                renderQuestions();
+            } else {
+                const pin = prompt("Enter 4-Digit Teacher PIN to unlock delete & reset tools:", "");
+                if (pin === TEACHER_PIN) {
+                    isTeacherMode = true;
+                    localStorage.setItem('hype_teacher_mode', 'true');
+                    showToast("🔓 Teacher Mode Unlocked!");
+                    updateTeacherUI();
                     renderQuestions();
+                } else if (pin !== null) {
+                    showToast("❌ Incorrect PIN!");
                 }
             }
         }
@@ -686,6 +668,12 @@
 
         async function deleteQuestion(id, e) {
             if(e) e.stopPropagation();
+
+            if (!isTeacherMode) {
+                showToast("🔒 Only teachers can delete posts!");
+                return;
+            }
+
             const list = classQuestions[currentClassId] || [];
             const q = list.find(item => item.firestoreId === id || item.id === id || String(item.id) === String(id));
 
@@ -701,6 +689,10 @@
         }
 
         async function confirmReset() {
+            if (!isTeacherMode) {
+                showToast("🔒 Only teachers can reset the class feed!");
+                return;
+            }
             const btn = document.getElementById('resetBtn');
             if(!resetConfirmState) {
                 resetConfirmState = true;
@@ -763,6 +755,13 @@
                     ? "bg-amber-500/30 border border-amber-400 text-amber-300 font-bold shadow-[0_0_12px_rgba(251,191,36,0.35)]" 
                     : "bg-white/10 hover:bg-white/25 border border-white/20 text-white font-bold";
 
+                // Show delete button only if Teacher Mode is ON
+                const deleteBtnHTML = isTeacherMode ? `
+                    <button class="text-white/40 hover:text-red-400 p-2 transition" onclick="deleteQuestion('${qId}', event)" title="Delete Question">
+                        🗑️
+                    </button>
+                ` : '';
+
                 const card = document.createElement('div');
                 card.className = `q-card glass-card rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${q.discussed ? 'discussed' : ''}`;
                 
@@ -780,9 +779,7 @@
                         <button class="text-white/40 hover:text-white p-2 transition" onclick="toggleDiscussed('${qId}', event)" title="Toggle Mark Discussed">
                             ${q.discussed ? '↩️' : '✅'}
                         </button>
-                        <button class="text-white/40 hover:text-red-400 p-2 transition" onclick="deleteQuestion('${qId}', event)" title="Delete">
-                            🗑️
-                        </button>
+                        ${deleteBtnHTML}
                     </div>
                 `;
 
@@ -791,194 +788,14 @@
         }
 
         function openSpotlight(id) {
-            const list = classQuestions[currentClassId] || [];
-            const q = list.find(item => item.firestoreId === id || item.id === id || String(item.id) === String(id));
-            if (!q) return;
-
-            activeSpotlightId = q.firestoreId || q.id;
-            document.getElementById('spotlightText').innerText = `"${q.text}"`;
-            document.getElementById('spotlightClassBadge').innerText = `${CLASS_CONFIGS[currentClassId].name} Spotlight`;
-            
-            const modal = document.getElementById('spotlightModal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            setTimerSeconds(120);
-        }
-
-        function closeSpotlight() {
-            const modal = document.getElementById('spotlightModal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-            pauseTimer();
-            activeSpotlightId = null;
-        }
-
-        function markSpotlightDiscussed() {
-            if (activeSpotlightId) {
-                toggleDiscussed(activeSpotlightId);
-                const config = CLASS_CONFIGS[currentClassId];
-                confetti({ particleCount: 80, spread: 100, origin: { y: 0.5 }, colors: [config.primary, config.secondary] });
-                closeSpotlight();
-            }
-        }
-
-        function pickRandomQuestion() {
-            const undiscussed = (classQuestions[currentClassId] || []).filter(q => !q.discussed);
-            if (undiscussed.length === 0) {
-                showToast("No active questions left to pick in this class!");
-                return;
-            }
-            const randomQ = undiscussed[Math.floor(Math.random() * undiscussed.length)];
-            const qId = randomQ.firestoreId || randomQ.id;
-            openSpotlight(qId);
-        }
-
-        function updateTimerDisplay() {
-            const mins = Math.floor(timerSeconds / 60);
-            const secs = timerSeconds % 60;
-            document.getElementById('timerDisplay').innerText = 
-                `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        }
-
-        function setTimerSeconds(sec) {
-            pauseTimer();
-            timerSeconds = sec;
-            updateTimerDisplay();
-        }
-
-        function toggleTimer() {
-            if (isTimerRunning) pauseTimer();
-            else startTimer();
-        }
-
-        function startTimer() {
-            if (isTimerRunning) return;
-            isTimerRunning = true;
-            document.getElementById('timerToggleBtn').innerText = "⏸️ Pause";
-            timerInterval = setInterval(() => {
-                if (timerSeconds > 0) {
-                    timerSeconds--;
-                    updateTimerDisplay();
-                } else {
-                    pauseTimer();
-                    showToast("⏰ Time's up for this topic!");
-                }
-            }, 1000);
-        }
-
-        function pauseTimer() {
-            isTimerRunning = false;
-            clearInterval(timerInterval);
-            document.getElementById('timerToggleBtn').innerText = "▶️ Start";
-        }
-
-        function resetTimer() {
-            setTimerSeconds(120);
-        }
-
-        const canvas = document.getElementById('bgCanvas');
-        const ctx = canvas ? canvas.getContext('2d') : null;
-        let particles = [];
-
-        function resizeCanvas() {
-            if (!canvas) return;
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-
-        function initCanvasParticles() {
-            if (!canvas) return;
-            particles = [];
-            const count = Math.min(Math.floor(window.innerWidth / 15), 70);
-
-            for (let i = 0; i < count; i++) {
-                particles.push({
-                    x: Math.random() * canvas.width,
-                    y: Math.random() * canvas.height,
-                    radius: Math.random() * 3 + 1,
-                    speedX: (Math.random() - 0.5) * 1.5,
-                    speedY: (Math.random() - 0.5) * 1.5,
-                    opacity: Math.random() * 0.7 + 0.3,
-                    pulse: Math.random() * 0.05 + 0.01
-                });
-            }
-        }
-
-        function renderCanvasBackdrop() {
-            if (!ctx || !canvas) return;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            const config = CLASS_CONFIGS[currentClassId] || CLASS_CONFIGS.helldivers;
-
-            if (particles.length === 0) initCanvasParticles();
-
-            particles.forEach(p => {
-                if (currentClassId === 'helldivers') {
-                    p.y += Math.abs(p.speedY) + 1.5;
-                    if (p.y > canvas.height) p.y = 0;
-                    ctx.fillStyle = config.primary;
-                    ctx.fillRect(p.x, p.y, 2, p.radius * 6);
-                } else if (currentClassId === 'bald_furious') {
-                    p.x += Math.abs(p.speedX) + 3;
-                    if (p.x > canvas.width) p.x = 0;
-                    ctx.fillStyle = config.secondary;
-                    ctx.fillRect(p.x, p.y, p.radius * 8, 2);
-                } else if (currentClassId === 'mr_clean') {
-                    p.y -= Math.abs(p.speedY) + 0.5;
-                    if (p.y < 0) p.y = canvas.height;
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, p.radius * 2.5, 0, Math.PI * 2);
-                    ctx.strokeStyle = config.primary;
-                    ctx.lineWidth = 1;
-                    ctx.stroke();
-                    ctx.fillStyle = "#ffffff";
-                    ctx.fillRect(p.x - p.radius * 0.5, p.y - p.radius * 0.5, 2, 2);
-                } else if (currentClassId === 'sunny_seniors') {
-                    p.y += (Math.random() - 0.5) * 0.8;
-                    p.x += (Math.random() - 0.5) * 0.8;
-                    p.opacity += Math.sin(Date.now() * 0.003) * 0.01;
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, p.radius * 3, 0, Math.PI * 2);
-                    ctx.fillStyle = config.secondary;
-                    ctx.globalAlpha = Math.max(0.1, Math.min(0.8, p.opacity));
-                    ctx.fill();
-                    ctx.globalAlpha = 1.0;
-                } else {
-                    p.x += p.speedX;
-                    p.y += p.speedY;
-                    if (p.x < 0 || p.x > canvas.width) p.speedX *= -1;
-                    if (p.y < 0 || p.y > canvas.height) p.speedY *= -1;
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, p.radius * 2, 0, Math.PI * 2);
-                    ctx.fillStyle = (p.radius > 2.5) ? config.primary : config.secondary;
-                    ctx.fill();
-                }
-            });
-
-            requestAnimationFrame(renderCanvasBackdrop);
-        }
-
-        window.switchClass = switchClass;
-        window.setFilter = setFilter;
-        window.upvote = upvote;
-        window.toggleDiscussed = toggleDiscussed;
-        window.deleteQuestion = deleteQuestion;
-        window.confirmReset = confirmReset;
-        window.openSpotlight = openSpotlight;
-        window.closeSpotlight = closeSpotlight;
-        window.markSpotlightDiscussed = markSpotlightDiscussed;
-        window.pickRandomQuestion = pickRandomQuestion;
-        window.setTimerSeconds = setTimerSeconds;
-        window.toggleTimer = toggleTimer;
-        window.resetTimer = resetTimer;
-        window.changeRoomCodePrompt = changeRoomCodePrompt;
+        window.toggleTeacherModePrompt = toggleTeacherModePrompt;
 
         window.onload = function() {
             switchClass(currentClassId);
             initCanvasParticles();
             renderCanvasBackdrop();
             initCloudSync();
+            updateTeacherUI();
         };
 
         document.addEventListener('keydown', (e) => {
