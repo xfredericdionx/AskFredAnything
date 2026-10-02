@@ -551,6 +551,8 @@
             });
         }
 
+        const BANNED_WORDS = ['shit', 'dick', 'fuck', 'bitch', 'asshole', 'cunt', 'pussy', 'bastard'];
+
         const qaForm = document.getElementById('qaForm');
         const questionInput = document.getElementById('questionInput');
 
@@ -560,6 +562,17 @@
                 const text = questionInput.value.trim();
 
                 if (text) {
+                    // Check for profanity
+                    const containsProfanity = BANNED_WORDS.some(word => {
+                        const regex = new RegExp(`\\b${word}\\b`, 'i'); // \b ensures we match whole words, 'i' makes it case-insensitive
+                        return regex.test(text);
+                    });
+
+                    if (containsProfanity) {
+                        showToast("⚠️ Keep it clean! Profanity is not allowed.");
+                        return; // Stop the submission
+                    }
+
                     const newQ = {
                         classId: currentClassId,
                         roomCode: currentRoomCode,
